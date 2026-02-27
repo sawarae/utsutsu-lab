@@ -20,6 +20,7 @@ uniform float u_radius;   /* cup radius in pixels */
 uniform float u_scatter;  /* 0 = contained, 1 = fully scattered */
 uniform float u_alpha;    /* master opacity */
 uniform vec2  u_canvas;   /* canvas size in pixels */
+uniform float u_bloom;    /* 0 = no flowers, 1 = all flowers visible */
 
 varying float v_rot;
 varying float v_alpha;
@@ -60,9 +61,10 @@ void main() {
   /* petal rotation angle, varying over time */
   v_rot   = u_time * speed * 0.9 + phase;
 
-  /* alpha: shimmer + fade when scattered */
-  float shimmer = 0.55 + 0.45 * sin(u_time * speed * 2.8 + phase);
-  v_alpha = u_alpha * shimmer * (1.0 - u_scatter * 0.85);
+  /* alpha: shimmer + fade when scattered + bloom gate */
+  float shimmer    = 0.55 + 0.45 * sin(u_time * speed * 2.8 + phase);
+  float birthFade  = smoothstep(a_seed, a_seed + 0.003, u_bloom);
+  v_alpha = u_alpha * shimmer * (1.0 - u_scatter * 0.85) * birthFade;
 }
 `;
 
@@ -147,8 +149,9 @@ class CherryRenderer {
    * @param {number} scatter  Scatter progress 0–1
    * @param {number} alpha    Master opacity 0–1
    * @param {number} time     Elapsed time in seconds
+   * @param {number} bloom    Particle reveal progress 0–1
    */
-  render(cx, cy, radius, scatter, alpha, time) {
+  render(cx, cy, radius, scatter, alpha, time, bloom = 1.0) {
     const gl = this.gl;
     const W = this.canvas.width;
     const H = this.canvas.height;
@@ -163,6 +166,7 @@ class CherryRenderer {
     gl.uniform1f(this._u.scatter, scatter);
     gl.uniform1f(this._u.alpha, alpha);
     gl.uniform2f(this._u.canvas, W, H);
+    gl.uniform1f(this._u.bloom, bloom);
 
     this._bindAttr(this._a.seed, this._bufSeed, 1);
     this._bindAttr(this._a.unitPos, this._bufUnitPos, 2);
@@ -200,6 +204,7 @@ class CherryRenderer {
       scatter: gl.getUniformLocation(this._prog, "u_scatter"),
       alpha: gl.getUniformLocation(this._prog, "u_alpha"),
       canvas: gl.getUniformLocation(this._prog, "u_canvas"),
+      bloom: gl.getUniformLocation(this._prog, "u_bloom"),
     };
 
     // Per-particle static data

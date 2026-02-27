@@ -41,6 +41,7 @@ let blossomAlpha = 0;
 let frameCount = 0;
 let appStartTs = 0; // performance.now() at camera start
 let detectedSince = null; // performance.now() when cup was first continuously detected
+let projectionStartTs = 0; // performance.now() when PROJECTING state started
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,7 @@ cameraCanvas.addEventListener("click", (e) => {
   cup = { x: mx, y: my, r: FALLBACK_RADIUS };
   if (detector) detector.reset();
 
+  projectionStartTs = performance.now();
   setState(AppState.PROJECTING);
   setStatus("🌸 桜が咲いています（手動配置）");
 });
@@ -216,6 +218,7 @@ function runDetect() {
       const held = (performance.now() - detectedSince) / 1000;
       if (held >= CONFIRM_DELAY) {
         detectedSince = null;
+        projectionStartTs = performance.now();
         setState(AppState.PROJECTING);
         setStatus("🌸 桜が咲いています");
       } else {
@@ -256,6 +259,17 @@ function drawOverlay() {
   overlayCtx.restore();
 }
 
+// ── Bloom progress ────────────────────────────────────────────────────────────
+
+function calcBloom() {
+  if (projectionStartTs === 0) return 1.0;
+  const age = (performance.now() - projectionStartTs) / 1000;
+  // 0–3s: one flower gently appears (u_bloom 0 → 0.004, ~1 particle)
+  if (age < 3) return (age / 3) * 0.004;
+  // 3–13s: remaining flowers gradually join
+  return 0.004 + Math.min(0.996, ((age - 3) / 10) * 0.996);
+}
+
 // ── Blossom render ────────────────────────────────────────────────────────────
 
 function drawBlossoms(t) {
@@ -272,10 +286,13 @@ function drawBlossoms(t) {
     scatter = Math.min(1, stateAge() / SCATTER_DURATION);
   }
 
+  // All particles visible during scatter; otherwise reveal gradually
+  const bloom = state === AppState.SCATTERING ? 1.0 : calcBloom();
+
   // Use last known cup position or canvas centre as fallback
   const cx = cup ? cup.x : W / 2;
   const cy = cup ? cup.y : H / 2;
   const r = cup ? cup.r : FALLBACK_RADIUS;
 
-  renderer.render(cx, cy, r, scatter, blossomAlpha, t);
+  renderer.render(cx, cy, r, scatter, blossomAlpha, t, bloom);
 }
