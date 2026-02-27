@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>器に咲く桜 - Sakura Projection</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0f;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
+      color: #fff;
+    }
+    h1 {
+      margin-bottom: 16px;
+      font-size: 18px;
+      color: #ffb7c5;
+      letter-spacing: 0.1em;
+      font-weight: 300;
+    }
+    #container {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(255, 183, 197, 0.15);
+    }
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    #camera-canvas  { z-index: 1; }
+    #overlay-canvas { z-index: 2; pointer-events: none; }
+    #blossom-canvas { z-index: 3; pointer-events: none; }
+    #hint-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10, 10, 15, 0.85);
+      cursor: pointer;
+    }
+    #hint-overlay p { color: #ffb7c5; font-size: 16px; margin: 8px 0; }
+    #hint-overlay .sub { font-size: 13px; color: #888; }
+    #start-btn {
+      margin-top: 20px;
+      padding: 10px 32px;
+      background: #ffb7c5;
+      color: #000;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-size: 15px;
+      font-family: inherit;
+      transition: background 0.2s;
+    }
+    #start-btn:hover { background: #ff91a4; }
+    #status-bar {
+      margin-top: 12px;
+      height: 24px;
+      font-size: 13px;
+      color: #ffb7c5;
+      opacity: 0.85;
+      letter-spacing: 0.05em;
+    }
+    #manual-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌸 器に咲く桜</h1>
+
+  <div id="container">
+    <canvas id="camera-canvas"  width="640" height="480"></canvas>
+    <canvas id="overlay-canvas" width="640" height="480"></canvas>
+    <canvas id="blossom-canvas" width="640" height="480"></canvas>
+
+    <div id="hint-overlay">
+      <p>器に桜を咲かせましょう</p>
+      <p class="sub">カメラでコップや茶碗を映すと桜が投影されます</p>
+      <button id="start-btn">カメラを起動</button>
+    </div>
+  </div>
+
+  <div id="status-bar">起動待機中</div>
+  <div id="manual-hint">カップが検出されないときはクリックで位置を手動指定できます</div>
+
+  <script src="cup-detector.js"></script>
+  <script src="cherry-renderer.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
