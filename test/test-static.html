@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Sakura Projection - Static Image Test</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; display: flex; align-items: center; justify-content: center; width: 640px; height: 480px; overflow: hidden; }
+    #container { position: relative; width: 640px; height: 480px; }
+    canvas { position: absolute; top: 0; left: 0; width: 640px; height: 480px; }
+    #bg-canvas  { z-index: 1; }
+    #blossom-canvas { z-index: 2; }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="bg-canvas"      width="640" height="480"></canvas>
+    <canvas id="blossom-canvas" width="640" height="480"></canvas>
+  </div>
+
+  <script src="../cherry-renderer.js"></script>
+  <script>
+    const W = 640, H = 480;
+    const bgCtx = document.getElementById('bg-canvas').getContext('2d');
+    const blossomCanvas = document.getElementById('blossom-canvas');
+
+    // Hardcoded cup position from the test image
+    // (centre of the matcha bowl, roughly)
+    const CUP = { x: 320, y: 270, r: 130 };
+
+    let renderer = null;
+    let startTime = null;
+
+    // Load the test image
+    const img = new Image();
+    img.onload = () => {
+      // Draw image scaled to 640x480
+      bgCtx.drawImage(img, 0, 0, W, H);
+
+      // Draw cup indicator ring
+      bgCtx.save();
+      bgCtx.strokeStyle = 'rgba(255,183,197,0.5)';
+      bgCtx.lineWidth = 2;
+      bgCtx.setLineDash([6, 4]);
+      bgCtx.beginPath();
+      bgCtx.arc(CUP.x, CUP.y, CUP.r, 0, Math.PI * 2);
+      bgCtx.stroke();
+      bgCtx.restore();
+
+      renderer  = new CherryRenderer(blossomCanvas);
+      startTime = performance.now();
+      requestAnimationFrame(loop);
+    };
+    img.src = 'assets/test-bowl.jpg';
+
+    function loop(ts) {
+      const t = (ts - startTime) / 1000;
+
+      // Scatter at t=3s, re-project at t=5s
+      let scatter = 0;
+      let alpha   = Math.min(1, t / 0.8);  // fade in
+
+      if (t >= 3.0 && t < 5.8) {
+        scatter = Math.min(1, (t - 3.0) / 2.8);
+      } else if (t >= 5.8) {
+        // re-appear after scatter
+        alpha   = Math.min(1, (t - 5.8) / 0.8);
+        scatter = 0;
+      }
+
+      renderer.render(CUP.x, CUP.y, CUP.r, scatter, alpha, t);
+      requestAnimationFrame(loop);
+    }
+
+    // Expose for puppeteer
+    window.getTime   = () => startTime !== null ? (performance.now() - startTime) / 1000 : -1;
+    window.isReady   = () => startTime !== null;
+  </script>
+</body>
+</html>
