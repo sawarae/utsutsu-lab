@@ -9,52 +9,52 @@
  * Manual cup placement is supported by clicking/tapping on the canvas.
  */
 
-'use strict';
+"use strict";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const W = 640;
 const H = 480;
 
-const DETECT_INTERVAL   = 6;    // process every Nth frame
-const MOVEMENT_THR      = 20;   // pixels movement to trigger scatter (at 640×480)
-const SCATTER_DURATION  = 2.8;  // seconds for scatter animation
-const REDETECT_DELAY    = 1.8;  // seconds after scatter before re-detecting
-const FALLBACK_RADIUS   = 100;  // default radius when using manual placement
+const DETECT_INTERVAL = 6; // process every Nth frame
+const MOVEMENT_THR = 20; // pixels movement to trigger scatter (at 640×480)
+const SCATTER_DURATION = 2.8; // seconds for scatter animation
+const REDETECT_DELAY = 1.8; // seconds after scatter before re-detecting
+const FALLBACK_RADIUS = 100; // default radius when using manual placement
 
 // ── State ──────────────────────────────────────────────────────────────────
 
 const AppState = Object.freeze({
-  IDLE:        'idle',
-  DETECTING:   'detecting',
-  PROJECTING:  'projecting',
-  SCATTERING:  'scattering',
-  REDETECTING: 'redetecting',
+  IDLE: "idle",
+  DETECTING: "detecting",
+  PROJECTING: "projecting",
+  SCATTERING: "scattering",
+  REDETECTING: "redetecting",
 });
 
-let state       = AppState.IDLE;
-let stateTs     = 0;   // performance.now() when state last changed
+let state = AppState.IDLE;
+let stateTs = 0; // performance.now() when state last changed
 
-let cup         = null;  // current cup {x, y, r}
+let cup = null; // current cup {x, y, r}
 let blossomAlpha = 0;
-let frameCount  = 0;
-let appStartTs  = 0;     // performance.now() at camera start
+let frameCount = 0;
+let appStartTs = 0; // performance.now() at camera start
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
-const hintOverlay   = document.getElementById('hint-overlay');
-const startBtn      = document.getElementById('start-btn');
-const statusBar     = document.getElementById('status-bar');
-const cameraCanvas  = document.getElementById('camera-canvas');
-const overlayCanvas = document.getElementById('overlay-canvas');
-const blossomCanvas = document.getElementById('blossom-canvas');
+const hintOverlay = document.getElementById("hint-overlay");
+const startBtn = document.getElementById("start-btn");
+const statusBar = document.getElementById("status-bar");
+const cameraCanvas = document.getElementById("camera-canvas");
+const overlayCanvas = document.getElementById("overlay-canvas");
+const blossomCanvas = document.getElementById("blossom-canvas");
 
-const cameraCtx  = cameraCanvas .getContext('2d');
-const overlayCtx = overlayCanvas.getContext('2d');
+const cameraCtx = cameraCanvas.getContext("2d");
+const overlayCtx = overlayCanvas.getContext("2d");
 
 // ── Module instances ────────────────────────────────────────────────────────
 
-let video    = null;
+let video = null;
 let detector = null;
 let renderer = null;
 
@@ -65,12 +65,12 @@ function setStatus(msg) {
 }
 
 function setState(s) {
-  state   = s;
+  state = s;
   stateTs = performance.now();
 }
 
 function stateAge() {
-  return (performance.now() - stateTs) / 1000;  // seconds since last state change
+  return (performance.now() - stateTs) / 1000; // seconds since last state change
 }
 
 function appTime() {
@@ -79,54 +79,54 @@ function appTime() {
 
 // ── Camera setup ─────────────────────────────────────────────────────────────
 
-startBtn.addEventListener('click', async () => {
+startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
-  setStatus('カメラにアクセス中…');
+  setStatus("カメラにアクセス中…");
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: W, height: H, facingMode: 'environment' },
+      video: { width: W, height: H, facingMode: "environment" },
       audio: false,
     });
 
-    video = document.createElement('video');
-    video.srcObject   = stream;
-    video.autoplay    = true;
+    video = document.createElement("video");
+    video.srcObject = stream;
+    video.autoplay = true;
     video.playsInline = true;
-    video.muted       = true;
+    video.muted = true;
     await video.play();
 
     detector = new CupDetector();
     renderer = new CherryRenderer(blossomCanvas);
 
-    hintOverlay.style.display = 'none';
+    hintOverlay.style.display = "none";
     appStartTs = performance.now();
 
     setState(AppState.DETECTING);
-    setStatus('器（コップや茶碗）をカメラに向けてください');
+    setStatus("器（コップ・茶碗・ペットボトル）をカメラに向けてください");
 
     requestAnimationFrame(loop);
   } catch (err) {
-    setStatus('カメラへのアクセスに失敗: ' + err.message);
+    setStatus("カメラへのアクセスに失敗: " + err.message);
     startBtn.disabled = false;
   }
 });
 
 // ── Manual cup placement (click/tap) ─────────────────────────────────────────
 
-cameraCanvas.addEventListener('click', (e) => {
+cameraCanvas.addEventListener("click", (e) => {
   if (state === AppState.IDLE) return;
   const rect = cameraCanvas.getBoundingClientRect();
   const scaleX = W / rect.width;
   const scaleY = H / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top)  * scaleY;
+  const my = (e.clientY - rect.top) * scaleY;
 
   cup = { x: mx, y: my, r: FALLBACK_RADIUS };
   if (detector) detector.reset();
 
   setState(AppState.PROJECTING);
-  setStatus('🌸 桜が咲いています（手動配置）');
+  setStatus("🌸 桜が咲いています（手動配置）");
 });
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
@@ -141,9 +141,11 @@ function loop(ts) {
 
   // Cup detection (throttled)
   frameCount++;
-  if (frameCount % DETECT_INTERVAL === 0 &&
-      state !== AppState.IDLE &&
-      state !== AppState.SCATTERING) {
+  if (
+    frameCount % DETECT_INTERVAL === 0 &&
+    state !== AppState.IDLE &&
+    state !== AppState.SCATTERING
+  ) {
     runDetect();
   }
 
@@ -154,14 +156,14 @@ function loop(ts) {
         cup = null;
         if (detector) detector.reset();
         setState(AppState.REDETECTING);
-        setStatus('また器を探しています…');
+        setStatus("また器を探しています…");
       }
       break;
 
     case AppState.REDETECTING:
       if (stateAge() >= REDETECT_DELAY) {
         setState(AppState.DETECTING);
-        setStatus('器（コップや茶碗）をカメラに向けてください');
+        setStatus("器（コップ・茶碗・ペットボトル）をカメラに向けてください");
       }
       break;
 
@@ -170,10 +172,11 @@ function loop(ts) {
   }
 
   // Blossom alpha fade
-  const wantBlossom = (state === AppState.PROJECTING || state === AppState.SCATTERING);
+  const wantBlossom =
+    state === AppState.PROJECTING || state === AppState.SCATTERING;
   blossomAlpha += wantBlossom
-    ? Math.min(0.025, 1 - blossomAlpha)   // fade in
-    : -Math.min(0.02, blossomAlpha);       // fade out
+    ? Math.min(0.025, 1 - blossomAlpha) // fade in
+    : -Math.min(0.02, blossomAlpha); // fade out
 
   // Render overlay (detected circle indicator)
   drawOverlay();
@@ -198,7 +201,7 @@ function runDetect() {
       const dy = detected.y - cup.y;
       if (Math.sqrt(dx * dx + dy * dy) > MOVEMENT_THR) {
         setState(AppState.SCATTERING);
-        setStatus('🌸 散っていく…');
+        setStatus("🌸 散っていく…");
         return;
       }
     }
@@ -207,14 +210,14 @@ function runDetect() {
 
     if (state === AppState.DETECTING) {
       setState(AppState.PROJECTING);
-      setStatus('🌸 桜が咲いています');
+      setStatus("🌸 桜が咲いています");
     }
   } else {
     if (state === AppState.DETECTING) {
       setStatus(
         detector.confidence < 0.3
-          ? '器（コップや茶碗）をカメラに向けてください'
-          : '器を追跡中…'
+          ? "器（コップ・茶碗・ペットボトル）をカメラに向けてください"
+          : "器を追跡中…",
       );
     }
   }
@@ -229,11 +232,11 @@ function drawOverlay() {
   if (state === AppState.IDLE || state === AppState.DETECTING) return;
 
   const confidence = detector ? detector.confidence : 1;
-  const alpha      = Math.min(confidence, blossomAlpha) * 0.45;
+  const alpha = Math.min(confidence, blossomAlpha) * 0.45;
 
   overlayCtx.save();
   overlayCtx.strokeStyle = `rgba(255, 183, 197, ${alpha})`;
-  overlayCtx.lineWidth   = 1.5;
+  overlayCtx.lineWidth = 1.5;
   overlayCtx.setLineDash([6, 4]);
   overlayCtx.beginPath();
   overlayCtx.arc(cup.x, cup.y, cup.r, 0, Math.PI * 2);
@@ -260,7 +263,7 @@ function drawBlossoms(t) {
   // Use last known cup position or canvas centre as fallback
   const cx = cup ? cup.x : W / 2;
   const cy = cup ? cup.y : H / 2;
-  const r  = cup ? cup.r : FALLBACK_RADIUS;
+  const r = cup ? cup.r : FALLBACK_RADIUS;
 
   renderer.render(cx, cy, r, scatter, blossomAlpha, t);
 }

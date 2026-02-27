@@ -31,10 +31,10 @@ float rand(float n) {
 
 void main() {
   float id     = a_seed;
-  float speed  = 0.12 + rand(id)         * 0.22;
+  float speed  = 0.06 + rand(id)         * 0.11;   /* halved for gentler motion */
   float psize  = 9.0  + rand(id + 0.11)  * 13.0;
   float phase  = rand(id + 0.22)          * 6.2832;
-  float dfreq  = 0.35 + rand(id + 0.33)  * 0.55;  /* drift frequency */
+  float dfreq  = 0.18 + rand(id + 0.33)  * 0.27;  /* halved drift frequency */
 
   /* gentle floating within unit disk */
   vec2 lp = a_unit_pos;
