@@ -49,6 +49,7 @@ let projectionMissCount = 0; // consecutive missed detections while PROJECTING
 const hintOverlay = document.getElementById("hint-overlay");
 const startBtn = document.getElementById("start-btn");
 const statusBar = document.getElementById("status-bar");
+const debugBar = document.getElementById("debug-bar");
 const cameraCanvas = document.getElementById("camera-canvas");
 const overlayCanvas = document.getElementById("overlay-canvas");
 const blossomCanvas = document.getElementById("blossom-canvas");
@@ -186,6 +187,14 @@ function loop(ts) {
 
   // Render cherry blossoms
   drawBlossoms(t);
+
+  // Debug info
+  if (detector) {
+    debugBar.textContent =
+      `state:${state}  conf:${detector.confidence.toFixed(2)}` +
+      `  miss:${detector._missCount}  projMiss:${projectionMissCount}` +
+      `  bloom:${calcBloom().toFixed(3)}`;
+  }
 
   requestAnimationFrame(loop);
 }
