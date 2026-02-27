@@ -17,11 +17,11 @@ const W = 640;
 const H = 480;
 
 const DETECT_INTERVAL = 6; // process every Nth frame
-const MOVEMENT_THR = 20; // pixels movement to trigger scatter (at 640×480)
 const SCATTER_DURATION = 2.8; // seconds for scatter animation
 const REDETECT_DELAY = 1.8; // seconds after scatter before re-detecting
 const FALLBACK_RADIUS = 100; // default radius when using manual placement
 const CONFIRM_DELAY = 5.0; // seconds of continuous detection before showing blossoms
+const MISSING_BEFORE_SCATTER = 20; // consecutive missed detections before scattering (~2s)
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,7 @@ let frameCount = 0;
 let appStartTs = 0; // performance.now() at camera start
 let detectedSince = null; // performance.now() when cup was first continuously detected
 let projectionStartTs = 0; // performance.now() when PROJECTING state started
+let projectionMissCount = 0; // consecutive missed detections while PROJECTING
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
@@ -200,17 +201,7 @@ function runDetect() {
   const detected = detector.detect(video, W, H);
 
   if (detected) {
-    // Movement check (only when already projecting)
-    if (cup && state === AppState.PROJECTING) {
-      const dx = detected.x - cup.x;
-      const dy = detected.y - cup.y;
-      if (Math.sqrt(dx * dx + dy * dy) > MOVEMENT_THR) {
-        setState(AppState.SCATTERING);
-        setStatus("🌸 散っていく…");
-        return;
-      }
-    }
-
+    projectionMissCount = 0;
     cup = detected;
 
     if (state === AppState.DETECTING) {
@@ -219,6 +210,7 @@ function runDetect() {
       if (held >= CONFIRM_DELAY) {
         detectedSince = null;
         projectionStartTs = performance.now();
+        projectionMissCount = 0;
         setState(AppState.PROJECTING);
         setStatus("🌸 桜が咲いています");
       } else {
@@ -227,7 +219,14 @@ function runDetect() {
       }
     }
   } else {
-    if (state === AppState.DETECTING) {
+    if (state === AppState.PROJECTING) {
+      projectionMissCount++;
+      if (projectionMissCount >= MISSING_BEFORE_SCATTER) {
+        projectionMissCount = 0;
+        setState(AppState.SCATTERING);
+        setStatus("🌸 散っていく…");
+      }
+    } else if (state === AppState.DETECTING) {
       detectedSince = null;
       setStatus(
         detector.confidence < 0.3
@@ -264,10 +263,10 @@ function drawOverlay() {
 function calcBloom() {
   if (projectionStartTs === 0) return 1.0;
   const age = (performance.now() - projectionStartTs) / 1000;
-  // 0–3s: one flower gently appears (u_bloom 0 → 0.004, ~1 particle)
-  if (age < 3) return (age / 3) * 0.004;
-  // 3–13s: remaining flowers gradually join
-  return 0.004 + Math.min(0.996, ((age - 3) / 10) * 0.996);
+  // 0–6s: one flower gently appears (u_bloom 0 → 0.004, ~1 particle)
+  if (age < 6) return (age / 6) * 0.004;
+  // 6–60s: remaining flowers gradually join
+  return 0.004 + Math.min(0.996, ((age - 6) / 54) * 0.996);
 }
 
 // ── Blossom render ────────────────────────────────────────────────────────────
