@@ -21,6 +21,7 @@ const MOVEMENT_THR = 20; // pixels movement to trigger scatter (at 640×480)
 const SCATTER_DURATION = 2.8; // seconds for scatter animation
 const REDETECT_DELAY = 1.8; // seconds after scatter before re-detecting
 const FALLBACK_RADIUS = 100; // default radius when using manual placement
+const CONFIRM_DELAY = 5.0; // seconds of continuous detection before showing blossoms
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ let cup = null; // current cup {x, y, r}
 let blossomAlpha = 0;
 let frameCount = 0;
 let appStartTs = 0; // performance.now() at camera start
+let detectedSince = null; // performance.now() when cup was first continuously detected
 
 // ── DOM ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +164,7 @@ function loop(ts) {
 
     case AppState.REDETECTING:
       if (stateAge() >= REDETECT_DELAY) {
+        detectedSince = null;
         setState(AppState.DETECTING);
         setStatus("器（コップ・茶碗・ペットボトル）をカメラに向けてください");
       }
@@ -209,11 +212,20 @@ function runDetect() {
     cup = detected;
 
     if (state === AppState.DETECTING) {
-      setState(AppState.PROJECTING);
-      setStatus("🌸 桜が咲いています");
+      if (detectedSince === null) detectedSince = performance.now();
+      const held = (performance.now() - detectedSince) / 1000;
+      if (held >= CONFIRM_DELAY) {
+        detectedSince = null;
+        setState(AppState.PROJECTING);
+        setStatus("🌸 桜が咲いています");
+      } else {
+        const remaining = Math.ceil(CONFIRM_DELAY - held);
+        setStatus(`器を確認中… あと${remaining}秒`);
+      }
     }
   } else {
     if (state === AppState.DETECTING) {
+      detectedSince = null;
       setStatus(
         detector.confidence < 0.3
           ? "器（コップ・茶碗・ペットボトル）をカメラに向けてください"
