@@ -202,6 +202,15 @@ function runDetect() {
 
   if (detected) {
     projectionMissCount = 0;
+    // Deadzone: ignore tiny jitter when already projecting
+    if (cup && state === AppState.PROJECTING) {
+      const dx = detected.x - cup.x;
+      const dy = detected.y - cup.y;
+      const dr = detected.r - cup.r;
+      if (Math.sqrt(dx * dx + dy * dy) < 6 && Math.abs(dr) < 5) {
+        return; // position hasn't meaningfully changed
+      }
+    }
     cup = detected;
 
     if (state === AppState.DETECTING) {
