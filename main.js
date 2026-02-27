@@ -184,9 +184,6 @@ function loop(ts) {
     ? Math.min(0.025, 1 - blossomAlpha) // fade in
     : -Math.min(0.02, blossomAlpha); // fade out
 
-  // Render overlay (detected circle indicator)
-  drawOverlay();
-
   // Render cherry blossoms
   drawBlossoms(t);
 
