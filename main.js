@@ -131,6 +131,7 @@ cameraCanvas.addEventListener("click", (e) => {
   if (detector) detector.reset();
 
   projectionStartTs = performance.now();
+  projectionMissCount = 0;
   setState(AppState.PROJECTING);
   setStatus("🌸 桜が咲いています（手動配置）");
 });
@@ -206,7 +207,12 @@ function runDetect() {
 
   const detected = detector.detect(video, W, H);
 
-  if (detected) {
+  // _missCount === 0 means Hough actually found a circle this frame.
+  // detected can be non-null even on misses (detector returns cached smoothed value),
+  // so we must check _missCount to know if it's a real detection.
+  const trulyDetected = detected !== null && detector._missCount === 0;
+
+  if (trulyDetected) {
     projectionMissCount = 0;
     // Deadzone: ignore tiny jitter when already projecting
     if (cup && state === AppState.PROJECTING) {
@@ -250,27 +256,6 @@ function runDetect() {
       );
     }
   }
-}
-
-// ── Overlay: draw detected circle ─────────────────────────────────────────────
-
-function drawOverlay() {
-  overlayCtx.clearRect(0, 0, W, H);
-
-  if (!cup) return;
-  if (state === AppState.IDLE || state === AppState.DETECTING) return;
-
-  const confidence = detector ? detector.confidence : 1;
-  const alpha = Math.min(confidence, blossomAlpha) * 0.45;
-
-  overlayCtx.save();
-  overlayCtx.strokeStyle = `rgba(255, 183, 197, ${alpha})`;
-  overlayCtx.lineWidth = 1.5;
-  overlayCtx.setLineDash([6, 4]);
-  overlayCtx.beginPath();
-  overlayCtx.arc(cup.x, cup.y, cup.r, 0, Math.PI * 2);
-  overlayCtx.stroke();
-  overlayCtx.restore();
 }
 
 // ── Bloom progress ────────────────────────────────────────────────────────────
