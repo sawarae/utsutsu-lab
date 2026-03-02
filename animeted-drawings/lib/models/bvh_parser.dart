@@ -34,7 +34,8 @@ class BvhData {
 
   /// Returns the per-joint world-space positions for a given frame.
   Map<String, Vector3> getJointPositions(int frameIndex) {
-    final frameData = frames[frameIndex % frameCount];
+    if (frames.isEmpty) return {};
+    final frameData = frames[frameIndex % frames.length];
     final positions = <String, Vector3>{};
     int channelOffset = 0;
 
@@ -92,7 +93,8 @@ class BvhData {
 
   /// Returns the per-joint local rotation matrices for a given frame.
   Map<String, Matrix4> getJointRotations(int frameIndex) {
-    final frameData = frames[frameIndex % frameCount];
+    if (frames.isEmpty) return {};
+    final frameData = frames[frameIndex % frames.length];
     final rotations = <String, Matrix4>{};
     int channelOffset = 0;
 

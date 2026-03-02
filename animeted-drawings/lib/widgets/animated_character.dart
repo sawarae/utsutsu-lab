@@ -56,7 +56,7 @@ class _AnimatedCharacterState extends State<AnimatedCharacter>
 
     final bvh = widget.characterData.bvhData;
     final frameTime = bvh.frameTime;
-    final totalFrames = bvh.frameCount;
+    final totalFrames = bvh.frames.length;
 
     if (totalFrames == 0) return;
 
