@@ -1,0 +1,24 @@
+{
+  "name": "utsutsu-lab",
+  "version": "1.0.0",
+  "description": "teamLab 風のインタラクティブアート体験。カメラでコップや茶碗を映すと、器の中に桜の花びらが浮かんでいるように見えるWebブラウザアプリケーションです。",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sawarae/utsutsu-lab.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sawarae/utsutsu-lab/issues"
+  },
+  "homepage": "https://github.com/sawarae/utsutsu-lab#readme",
+  "dependencies": {
+    "puppeteer-core": "^24.37.5"
+  }
+}
