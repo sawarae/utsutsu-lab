@@ -1,0 +1,43 @@
+{
+  "image_width": 200,
+  "image_height": 300,
+  "joints": {
+    "root": {"x": 100, "y": 200, "parent": null},
+    "spine": {"x": 100, "y": 150, "parent": "root"},
+    "neck": {"x": 100, "y": 95, "parent": "spine"},
+    "head": {"x": 100, "y": 45, "parent": "neck"},
+    "left_shoulder": {"x": 66, "y": 107, "parent": "spine"},
+    "left_elbow": {"x": 48, "y": 163, "parent": "left_shoulder"},
+    "left_wrist": {"x": 32, "y": 207, "parent": "left_elbow"},
+    "right_shoulder": {"x": 134, "y": 107, "parent": "spine"},
+    "right_elbow": {"x": 152, "y": 163, "parent": "right_shoulder"},
+    "right_wrist": {"x": 168, "y": 207, "parent": "right_elbow"},
+    "left_hip": {"x": 82, "y": 200, "parent": "root"},
+    "left_knee": {"x": 79, "y": 255, "parent": "left_hip"},
+    "left_ankle": {"x": 76, "y": 290, "parent": "left_knee"},
+    "right_hip": {"x": 118, "y": 200, "parent": "root"},
+    "right_knee": {"x": 121, "y": 255, "parent": "right_hip"},
+    "right_ankle": {"x": 124, "y": 290, "parent": "right_knee"}
+  },
+  "bvh_joint_mapping": {
+    "Hips": "root",
+    "Spine": "spine",
+    "Spine1": "spine",
+    "Neck": "neck",
+    "Head": "head",
+    "LeftShoulder": "left_shoulder",
+    "LeftArm": "left_shoulder",
+    "LeftForeArm": "left_elbow",
+    "LeftHand": "left_wrist",
+    "RightShoulder": "right_shoulder",
+    "RightArm": "right_shoulder",
+    "RightForeArm": "right_elbow",
+    "RightHand": "right_wrist",
+    "LeftUpLeg": "left_hip",
+    "LeftLeg": "left_knee",
+    "LeftFoot": "left_ankle",
+    "RightUpLeg": "right_hip",
+    "RightLeg": "right_knee",
+    "RightFoot": "right_ankle"
+  }
+}
