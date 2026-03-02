@@ -121,6 +121,10 @@ class CharacterPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CharacterPainter oldDelegate) {
-    return oldDelegate.deformedJointPositions != deformedJointPositions;
+    return oldDelegate.texture != texture ||
+        oldDelegate.skeleton != skeleton ||
+        oldDelegate.skinning != skinning ||
+        oldDelegate.debugSkeleton != debugSkeleton ||
+        oldDelegate.deformedJointPositions != deformedJointPositions;
   }
 }

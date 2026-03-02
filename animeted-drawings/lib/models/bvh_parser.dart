@@ -146,21 +146,26 @@ class BvhParser {
     int i = 0;
     final allJoints = <BvhJoint>[];
 
-    BvhJoint parseJoint(String name) {
+    BvhJoint parseJoint(String name, {BvhJoint? parent}) {
       // Expect '{'
       i++;
       final offset = _parseOffset(lines[i++]);
       final channels = _parseChannels(lines[i++]);
-      final children = <BvhJoint>[];
+      final joint = BvhJoint(
+        name: name,
+        offset: offset,
+        channels: channels,
+        children: [],
+        parent: parent,
+      );
+      allJoints.add(joint);
 
       while (i < lines.length) {
         final line = lines[i];
         if (line.startsWith('JOINT ')) {
           final childName = line.substring(6).trim();
           i++;
-          final child = parseJoint(childName);
-          child.parent = allJoints.isEmpty ? null : allJoints.last;
-          children.add(child);
+          joint.children.add(parseJoint(childName, parent: joint));
         } else if (line.startsWith('End Site')) {
           i++; // {
           i++; // OFFSET
@@ -174,13 +179,6 @@ class BvhParser {
         }
       }
 
-      final joint = BvhJoint(
-        name: name,
-        offset: offset,
-        channels: channels,
-        children: children,
-      );
-      allJoints.add(joint);
       return joint;
     }
 
