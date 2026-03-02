@@ -28,13 +28,18 @@ class CharacterData {
     final configJson = jsonDecode(configStr) as Map<String, dynamic>;
     final skeleton = Skeleton.fromJson(configJson);
 
-    // Load texture
+    // Load texture — codec/frame must be disposed after extracting the image
     final textureBytes = await rootBundle.load('$characterAsset/texture.png');
     final codec = await ui.instantiateImageCodec(
       textureBytes.buffer.asUint8List(),
     );
-    final frame = await codec.getNextFrame();
-    final texture = frame.image;
+    final ui.Image texture;
+    try {
+      final frame = await codec.getNextFrame();
+      texture = frame.image;
+    } finally {
+      codec.dispose();
+    }
 
     // Load BVH
     final bvhStr = await rootBundle.loadString(motionAsset);

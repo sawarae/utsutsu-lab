@@ -19,13 +19,9 @@ class _HomePageState extends State<HomePage> {
   bool _debugSkeleton = false;
   String _errorMessage = '';
 
-  static const String _characterAsset =
-      'assets/characters/irasutoya_girl';
+  static const String _characterAsset = 'assets/characters/irasutoya_girl';
 
-  static const List<String> _motions = [
-    'wave_hello',
-    'zombie',
-  ];
+  static const List<String> _motions = ['wave_hello', 'zombie'];
   String _currentMotion = 'wave_hello';
 
   @override
@@ -60,7 +56,12 @@ class _HomePageState extends State<HomePage> {
   Future<void> _switchMotion(String motionName) async {
     if (motionName == _currentMotion) return;
 
-    setState(() => _currentMotion = motionName);
+    final previousMotion = _currentMotion;
+    setState(() {
+      _currentMotion = motionName;
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
     try {
       final bvhStr = await rootBundle.loadString(
@@ -69,9 +70,14 @@ class _HomePageState extends State<HomePage> {
       final bvhData = BvhParser.parse(bvhStr);
       setState(() {
         _characterData = _characterData?.copyWithMotion(bvhData, motionName);
+        _isLoading = false;
       });
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      setState(() {
+        _currentMotion = previousMotion; // rollback on failure
+        _isLoading = false;
+        _errorMessage = 'Failed to load motion: $motionName';
+      });
     }
   }
 
@@ -99,9 +105,7 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           // Character display area
-          Expanded(
-            child: _buildCharacterView(),
-          ),
+          Expanded(child: _buildCharacterView()),
           // Controls panel
           _buildControls(),
         ],
@@ -150,7 +154,10 @@ class _HomePageState extends State<HomePage> {
 
     if (_characterData == null) {
       return const Center(
-        child: Text('No character loaded', style: TextStyle(color: Colors.white70)),
+        child: Text(
+          'No character loaded',
+          style: TextStyle(color: Colors.white70),
+        ),
       );
     }
 
@@ -158,7 +165,8 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(24),
       child: Center(
         child: AspectRatio(
-          aspectRatio: _characterData!.skeleton.imageWidth /
+          aspectRatio:
+              _characterData!.skeleton.imageWidth /
               _characterData!.skeleton.imageHeight.toDouble(),
           child: AnimatedCharacter(
             key: ValueKey(_currentMotion),
@@ -183,10 +191,7 @@ class _HomePageState extends State<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'Motion: ',
-                style: TextStyle(color: Colors.white70),
-              ),
+              const Text('Motion: ', style: TextStyle(color: Colors.white70)),
               const SizedBox(width: 8),
               DropdownButton<String>(
                 value: _currentMotion,
@@ -221,10 +226,7 @@ class _HomePageState extends State<HomePage> {
                 onPressed: () => setState(() => _isPlaying = !_isPlaying),
               ),
               const SizedBox(width: 16),
-              const Text(
-                'Speed:',
-                style: TextStyle(color: Colors.white70),
-              ),
+              const Text('Speed:', style: TextStyle(color: Colors.white70)),
               const SizedBox(width: 8),
               SizedBox(
                 width: 200,
