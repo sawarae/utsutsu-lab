@@ -19,6 +19,6 @@
   },
   "homepage": "https://github.com/sawarae/utsutsu-lab#readme",
   "dependencies": {
-    "puppeteer-core": "^24.37.5"
+    "puppeteer-core": "^24.39.0"
   }
 }
