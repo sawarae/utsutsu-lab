@@ -672,24 +672,23 @@ const m2 = {
    S = U Σ V^T
    ========================================================= */
 function svd2x2(S) {
-  // S = [a,b,c,d]  (S[0]=a, S[1]=b, S[2]=c, S[3]=d)
-  const a=S[0], b=S[2], c=S[1], d=S[3];
-  // tau = (a-d)/2b
-  const e = (a+d)*0.5, f = (a-d)*0.5;
-  const g = (b+c)*0.5, h = (b-c)*0.5;
-  const q = Math.sqrt(f*f+g*g), r = Math.sqrt(e*e+h*h);
-  const sx = r+q, sy = r-q;
-
-  const a1 = Math.atan2(g,f), a2 = Math.atan2(h,e);
-  const theta = (a2-a1)*0.5;
-  const phi   = (a2+a1)*0.5;
-
-  const ct=Math.cos(theta), st=Math.sin(theta);
-  const cp=Math.cos(phi),   sp=Math.sin(phi);
-
-  const U = [cp, sp, -sp, cp];  // rotation
-  const V = [ct, st, -st, ct];
-  return { U, S:[sx,sy], V };
+  // S は列優先 [S00, S10, S01, S11]
+  // 2D 極分解: 最近接回転行列 R を求める
+  // R の角度 θ = atan2(S10-S01, S00+S11)
+  // （純回転入力でも正確: atan2(0,0) 縮退を回避）
+  const cosT = S[0] + S[3];   // S00 + S11
+  const sinT = S[2] - S[1];   // S01 - S10（符号に注意: tr(R·S)最大化より）
+  const len  = Math.sqrt(cosT*cosT + sinT*sinT);
+  if (len < 1e-10) {
+    // 縮退ケース（零行列など）: 単位行列を返す
+    return { U:[1,0,0,1], S:[0,0], V:[1,0,0,1] };
+  }
+  const c = cosT/len, s = sinT/len;
+  // R = V U^T。U=I として V=R とすれば V U^T = R
+  const V = [c, s, -s, c];  // 列優先の回転行列
+  const sx = len;
+  const sy = Math.abs((S[0]*S[3]-S[1]*S[2]) / len);  // 第2特異値
+  return { U:[1,0,0,1], S:[sx,sy], V };
 }
 
 /* =========================================================
@@ -928,7 +927,7 @@ class ARAP2D {
 
     // ガウスザイデル反復（疎ソルバーの簡易版）
     const newPos=this.pos.map(p=>[...p]);
-    const GS_ITER=8;
+    const GS_ITER=40;
     for(let it=0;it<GS_ITER;it++){
       for(let i=0;i<n;i++){
         if(this.pins.has(i)){ newPos[i]=[...this.rest[i]]; continue; }
