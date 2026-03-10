@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>As-Rigid-As-Possible — インタラクティブ解説</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ]
+    });"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --pink: #f78166;
+      --purple: #bc8cff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 0;
+      text-align: center;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header h1 span { color: var(--accent); }
+    header p { color: var(--muted); margin-top: 6px; font-size: 0.95rem; }
+    nav {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 12px 20px;
+      font-size: 0.9rem;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    nav a:hover, nav a.active { color: var(--text); border-bottom-color: var(--accent); }
+    main { max-width: 900px; margin: 0 auto; padding: 48px 24px; }
+    section { margin-bottom: 80px; scroll-margin-top: 56px; }
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    h2 .step-badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+    h3 { font-size: 1.1rem; margin: 28px 0 10px; color: var(--accent); }
+    p { margin-bottom: 12px; }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .math-box {
+      background: var(--bg3);
+      border-left: 3px solid var(--purple);
+      border-radius: 4px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .math-box .label {
+      font-size: 0.78rem;
+      color: var(--purple);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    code {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.85em;
+      background: var(--bg3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--green);
+    }
+    pre {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin: 16px 0;
+    }
+    pre .kw { color: var(--purple); }
+    pre .fn { color: var(--accent); }
+    pre .cm { color: var(--muted); font-style: italic; }
+    pre .num { color: var(--yellow); }
+    pre .str { color: var(--green); }
+    pre .type { color: var(--pink); }
+    canvas {
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin: 0 auto;
+    }
+    .demo-row {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .demo-row canvas { flex: 1; min-width: 200px; }
+    .demo-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+      align-items: center;
+    }
+    button {
+      background: var(--bg3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: all 0.15s;
+    }
+    button:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+    button.active { background: var(--accent); color: #000; border-color: var(--accent); }
+    input[type=range] {
+      accent-color: var(--accent);
+      width: 160px;
+    }
+    label { font-size: 0.85rem; color: var(--muted); }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .info-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .info-card .val { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+    .info-card .key { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.875rem; }
+    th { background: var(--bg3); color: var(--accent); padding: 10px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 9px 12px; border: 1px solid var(--border); color: var(--muted); }
+    td:first-child { color: var(--text); font-weight: 500; }
+    .annotation {
+      background: var(--bg3);
+      border: 1px solid var(--yellow);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 0.875rem;
+    }
+    .annotation::before {
+      content: '💡 ';
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      margin: 0 2px;
+    }
+    .tag-math { background: rgba(188,140,255,0.2); color: var(--purple); }
+    .tag-code { background: rgba(63,185,80,0.2); color: var(--green); }
+    .tag-demo { background: rgba(88,166,255,0.2); color: var(--accent); }
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1><span>As-Rigid-As-Possible</span> Surface Modeling</h1>
+  <p>Sorkine & Alexa 2007 — アルゴリズムの各ステップを数式とコードで理解する</p>
+</header>
+
+<nav id="nav">
+  <a href="#overview" class="active">概要</a>
+  <a href="#step1">Step 1: エネルギー定式化</a>
+  <a href="#step2">Step 2: 回転の推定</a>
+  <a href="#step3">Step 3: 形状フィッティング</a>
+  <a href="#step4">Step 4: 反復収束</a>
+  <a href="#demo">インタラクティブデモ</a>
+</nav>
+
+<main>
+
+<!-- =============================================================== OVERVIEW -->
+<section id="overview">
+  <h2>概要 — What is ARAP?</h2>
+  <p>
+    <strong>As-Rigid-As-Possible (ARAP)</strong> は、メッシュ変形において「できる限り剛体変形に近い形状変化」を実現するアルゴリズムです。
+    ユーザーがいくつかの頂点（ハンドル）を移動させると、残りの頂点が局所的な剛体性を保ちながら自然に変形します。
+  </p>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="val">O(n²)</div>
+      <div class="key">疎線形システム（1回の解法）</div>
+    </div>
+    <div class="info-card">
+      <div class="val">SVD</div>
+      <div class="key">各セルの最適回転行列推定</div>
+    </div>
+    <div class="info-card">
+      <div class="val">交互最適化</div>
+      <div class="key">Local Step ↔ Global Step</div>
+    </div>
+  </div>
+
+  <p>アルゴリズムは <strong>Local-Global 交互最適化</strong> を繰り返します：</p>
+  <div class="card">
+    <strong>Local Step（局所）</strong> — 各セルの局所座標を固定して、最適な回転行列 $R_i$ を SVD で求める<br>
+    <strong>Global Step（大域）</strong> — 回転行列 $R_i$ を固定して、全頂点の新位置を線形システムで一括更新
+  </div>
+</section>
+
+<!-- ============================================================== STEP 1 -->
+<section id="step1">
+  <h2><span class="step-badge">STEP 1</span> エネルギー定式化</h2>
+
+  <p>
+    ARAP の目的関数（エネルギー）を最小化することで変形を求めます。
+    各頂点 $i$ の近傍 $\mathcal{N}(i)$ に対して、変形前後のエッジが回転行列 $R_i$ だけ異なるようにします。
+  </p>
+
+  <div class="math-box">
+    <div class="label">ARAP エネルギー（論文 Eq. 7）</div>
+    $$E(\mathbf{p}', \{R_i\}) = \sum_{i=1}^{n} w_i \sum_{j \in \mathcal{N}(i)} w_{ij} \left\| (\mathbf{p}'_i - \mathbf{p}'_j) - R_i(\mathbf{p}_i - \mathbf{p}_j) \right\|^2$$
+  </div>
+
+  <h3>記号の説明</h3>
+  <table>
+    <tr><th>記号</th><th>意味</th></tr>
+    <tr><td>$\mathbf{p}_i$</td><td>変形前の頂点 $i$ の座標（レスト形状）</td></tr>
+    <tr><td>$\mathbf{p}'_i$</td><td>変形後の頂点 $i$ の座標（求める変数）</td></tr>
+    <tr><td>$R_i$</td><td>頂点 $i$ に割り当てた最適回転行列（$3\times3$）</td></tr>
+    <tr><td>$w_{ij}$</td><td>コタンジェント重み $= \frac{1}{2}(\cot\alpha_{ij} + \cot\beta_{ij})$</td></tr>
+    <tr><td>$\mathcal{N}(i)$</td><td>頂点 $i$ に隣接する頂点の集合（1-ring 近傍）</td></tr>
+  </table>
+
+  <div class="annotation">
+    コタンジェント重みは、三角形の角度が鋭いほど大きな重みを与えます。これにより、各エッジの「重要度」が幾何学的に意味のある形で組み込まれます。
+  </div>
+
+  <h3>コタンジェント重みの計算</h3>
+  <div class="math-box">
+    <div class="label">コタンジェント重み</div>
+    $$w_{ij} = \frac{1}{2}\left(\cot\alpha_{ij} + \cot\beta_{ij}\right)$$
+    <div style="margin-top:10px;color:var(--muted);font-size:0.9em">
+      $\alpha_{ij}$, $\beta_{ij}$ はエッジ $(i,j)$ を挟む2つの三角形における対角の角度
+    </div>
+  </div>
+
+  <pre><span class="cm">// コタンジェント重みの計算</span>
+<span class="kw">function</span> <span class="fn">cotangentWeight</span>(pi, pj, pk) {
+  <span class="cm">// pk はエッジ(i,j) の対頂点</span>
+  <span class="kw">const</span> u = <span class="fn">sub</span>(pi, pk);  <span class="cm">// ベクトル pk→pi</span>
+  <span class="kw">const</span> v = <span class="fn">sub</span>(pj, pk);  <span class="cm">// ベクトル pk→pj</span>
+  <span class="kw">const</span> cosA = <span class="fn">dot</span>(u, v);
+  <span class="kw">const</span> sinA = <span class="fn">length</span>(<span class="fn">cross</span>(u, v));
+  <span class="kw">return</span> cosA / sinA;  <span class="cm">// cot = cos/sin</span>
+}
+
+<span class="kw">function</span> <span class="fn">buildWeights</span>(mesh) {
+  <span class="kw">const</span> W = <span class="kw">new</span> <span class="type">Map</span>();
+  <span class="kw">for</span> (<span class="kw">const</span> [i, j, k] <span class="kw">of</span> mesh.triangles) {
+    <span class="cm">// 各エッジに対して2つの三角形からのcotを加算</span>
+    <span class="kw">const</span> wij = <span class="fn">cotangentWeight</span>(mesh.p[i], mesh.p[j], mesh.p[k]);
+    <span class="fn">addWeight</span>(W, i, j, <span class="num">0.5</span> * wij);
+    <span class="fn">addWeight</span>(W, j, k, <span class="num">0.5</span> * <span class="fn">cotangentWeight</span>(mesh.p[j], mesh.p[k], mesh.p[i]));
+    <span class="fn">addWeight</span>(W, k, i, <span class="num">0.5</span> * <span class="fn">cotangentWeight</span>(mesh.p[k], mesh.p[i], mesh.p[j]));
+  }
+  <span class="kw">return</span> W;
+}</pre>
+</section>
+
+<!-- ============================================================== STEP 2 -->
+<section id="step2">
+  <h2><span class="step-badge">STEP 2</span> 回転の推定 — Local Step (SVD)</h2>
+
+  <p>
+    Global Step で更新した頂点位置 $\mathbf{p}'$ を固定して、各頂点 $i$ の最適回転 $R_i$ を求めます。
+    これは各 $R_i$ を独立に解けるため、頂点ごとに並列計算できます。
+  </p>
+
+  <h3>共分散行列 $S_i$ の構築</h3>
+  <p>頂点 $i$ のセル（1-ring 近傍）に対して共分散行列を組み立てます：</p>
+
+  <div class="math-box">
+    <div class="label">共分散行列（論文 Eq. 5）</div>
+    $$S_i = \sum_{j \in \mathcal{N}(i)} w_{ij}\, \mathbf{e}_{ij}\, \mathbf{e}'^{\top}_{ij}$$
+    <div style="margin-top:10px;color:var(--muted);font-size:0.9em">
+      $\mathbf{e}_{ij} = \mathbf{p}_i - \mathbf{p}_j$（変形前エッジ），　$\mathbf{e}'_{ij} = \mathbf{p}'_i - \mathbf{p}'_j$（変形後エッジ）
+    </div>
+  </div>
+
+  <h3>SVD による最適回転の抽出</h3>
+
+  <div class="math-box">
+    <div class="label">SVD 分解と回転行列の計算（論文 Eq. 6）</div>
+    $$S_i = U \Sigma V^\top \quad \Rightarrow \quad R_i = V U^\top$$
+  </div>
+
+  <div class="annotation">
+    $\det(VU^\top) = -1$ になる場合（反転）、$U$ の最小特異値に対応する列を符号反転して正しい回転行列に修正します。これは反射を回転に変換する処理です。
+  </div>
+
+  <pre><span class="cm">// Local Step: SVD で各セルの最適回転を求める</span>
+<span class="kw">function</span> <span class="fn">localStep</span>(mesh, pNew) {
+  <span class="kw">const</span> rotations = [];
+
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; mesh.n; i++) {
+    <span class="cm">// 3×3 共分散行列 S_i を初期化（列優先）</span>
+    <span class="kw">const</span> S = <span class="fn">zeros</span>(<span class="num">3</span>, <span class="num">3</span>);
+
+    <span class="kw">for</span> (<span class="kw">const</span> j <span class="kw">of</span> mesh.neighbors[i]) {
+      <span class="kw">const</span> w = mesh.W[i][j];
+      <span class="cm">// 変形前エッジ e_ij = p_i - p_j</span>
+      <span class="kw">const</span> e  = <span class="fn">sub</span>(mesh.p[i],  mesh.p[j]);
+      <span class="cm">// 変形後エッジ e'_ij = p'_i - p'_j</span>
+      <span class="kw">const</span> eP = <span class="fn">sub</span>(pNew[i], pNew[j]);
+
+      <span class="cm">// 外積（rank-1 行列）の重み付き和: S += w * e * eP^T</span>
+      <span class="kw">for</span> (<span class="kw">let</span> r = <span class="num">0</span>; r &lt; <span class="num">3</span>; r++)
+        <span class="kw">for</span> (<span class="kw">let</span> c = <span class="num">3</span>; c &lt; <span class="num">3</span>; c++)
+          S[r][c] += w * e[r] * eP[c];
+    }
+
+    <span class="cm">// SVD: S = U Σ V^T</span>
+    <span class="kw">const</span> { U, V } = <span class="fn">svd3x3</span>(S);
+
+    <span class="cm">// 最適回転: R = V U^T</span>
+    <span class="kw">let</span> R = <span class="fn">matMul</span>(V, <span class="fn">transpose</span>(U));
+
+    <span class="cm">// 反射チェック: det(R) < 0 なら最小特異値列を反転</span>
+    <span class="kw">if</span> (<span class="fn">det3</span>(R) &lt; <span class="num">0</span>) {
+      U[<span class="num">0</span>][<span class="num">2</span>] *= -<span class="num">1</span>; U[<span class="num">1</span>][<span class="num">2</span>] *= -<span class="num">1</span>; U[<span class="num">2</span>][<span class="num">2</span>] *= -<span class="num">1</span>;
+      R = <span class="fn">matMul</span>(V, <span class="fn">transpose</span>(U));
+    }
+    rotations.push(R);
+  }
+  <span class="kw">return</span> rotations;
+}
+</pre>
+
+  <h3>インタラクティブ: 2D の SVD 回転推定</h3>
+  <p>左のメッシュをドラッグして変形させると、右のパネルに SVD で求まった最適回転行列をリアルタイム表示します。</p>
+  <div class="demo-row">
+    <canvas id="svdCanvas" width="340" height="280"></canvas>
+    <div style="flex:1;min-width:200px">
+      <div class="card" style="font-family:monospace;font-size:0.8rem">
+        <div style="color:var(--purple);font-weight:700;margin-bottom:10px">共分散行列 S</div>
+        <div id="matS">—</div>
+        <div style="color:var(--purple);font-weight:700;margin:14px 0 10px">最適回転行列 R</div>
+        <div id="matR">—</div>
+        <div style="color:var(--purple);font-weight:700;margin:14px 0 10px">回転角 θ</div>
+        <div id="rotAngle" style="font-size:1.1rem;color:var(--accent)">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="demo-controls">
+    <button id="svdResetBtn">リセット</button>
+    <label>変形量: <input type="range" id="svdSlider" min="0" max="100" value="50"></label>
+  </div>
+</section>
+
+<!-- ============================================================== STEP 3 -->
+<section id="step3">
+  <h2><span class="step-badge">STEP 3</span> 形状フィッティング — Global Step (線形システム)</h2>
+
+  <p>
+    Local Step で求めた回転行列 $\{R_i\}$ を固定して、全頂点の新位置 $\mathbf{p}'$ を求めます。
+    エネルギーを $\mathbf{p}'$ で微分してゼロとおくと、線形方程式系が得られます。
+  </p>
+
+  <div class="math-box">
+    <div class="label">Global Step 方程式（論文 Eq. 8）</div>
+    $$\sum_{j \in \mathcal{N}(i)} w_{ij}(\mathbf{p}'_i - \mathbf{p}'_j) = \sum_{j \in \mathcal{N}(i)} \frac{w_{ij}}{2}(R_i + R_j)(\mathbf{p}_i - \mathbf{p}_j)$$
+  </div>
+
+  <p>これを行列形式で書くと：</p>
+
+  <div class="math-box">
+    <div class="label">行列形式（ラプラシアン系）</div>
+    $$L\, \mathbf{p}' = \mathbf{b}$$
+    <div style="margin-top:12px;font-size:0.9em;color:var(--muted)">
+      ラプラシアン行列 $L$：
+      $$L_{ii} = \sum_{j \in \mathcal{N}(i)} w_{ij}, \quad L_{ij} = -w_{ij} \text{ (隣接)}, \quad L_{ij} = 0 \text{ (非隣接)}$$
+    </div>
+    <div style="margin-top:12px;font-size:0.9em;color:var(--muted)">
+      右辺 $\mathbf{b}$ の $i$ 行目：
+      $$\mathbf{b}_i = \sum_{j \in \mathcal{N}(i)} \frac{w_{ij}}{2}(R_i + R_j)\mathbf{e}_{ij}$$
+    </div>
+  </div>
+
+  <h3>ハンドル（固定頂点）の扱い</h3>
+  <p>
+    ユーザーが指定した固定頂点（ハンドル）の行は、対角成分を $1$、他を $0$ に置き換え、右辺を拘束座標にします（Dirichlet 境界条件）。
+  </p>
+
+  <pre><span class="cm">// Global Step: ラプラシアン線形システムを構築して解く</span>
+<span class="kw">function</span> <span class="fn">globalStep</span>(mesh, rotations, handles) {
+  <span class="kw">const</span> n = mesh.n;
+
+  <span class="cm">// ラプラシアン行列 L（疎行列）を構築</span>
+  <span class="kw">const</span> L = <span class="fn">sparseMat</span>(n, n);
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; n; i++) {
+    <span class="kw">let</span> sumW = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="kw">const</span> j <span class="kw">of</span> mesh.neighbors[i]) {
+      <span class="kw">const</span> w = mesh.W[i][j];
+      L.<span class="fn">set</span>(i, j, -w);   <span class="cm">// 非対角成分</span>
+      sumW += w;
+    }
+    L.<span class="fn">set</span>(i, i, sumW);   <span class="cm">// 対角成分 = 行の重みの和</span>
+  }
+
+  <span class="cm">// 右辺ベクトル b を構築（x, y, z 各成分独立）</span>
+  <span class="kw">const</span> b = <span class="fn">zeros</span>(n, <span class="num">3</span>);
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; n; i++) {
+    <span class="kw">for</span> (<span class="kw">const</span> j <span class="kw">of</span> mesh.neighbors[i]) {
+      <span class="kw">const</span> w  = mesh.W[i][j];
+      <span class="kw">const</span> Ri = rotations[i];
+      <span class="kw">const</span> Rj = rotations[j];
+      <span class="kw">const</span> eij = <span class="fn">sub</span>(mesh.p[i], mesh.p[j]);  <span class="cm">// 変形前エッジ</span>
+      <span class="cm">// b_i += (w/2) * (Ri + Rj) * e_ij</span>
+      <span class="kw">const</span> rotated = <span class="fn">vecAdd</span>(
+        <span class="fn">matVec</span>(Ri, eij),
+        <span class="fn">matVec</span>(Rj, eij)
+      );
+      b[i] = <span class="fn">vecAdd</span>(b[i], <span class="fn">scale</span>(rotated, w * <span class="num">0.5</span>));
+    }
+  }
+
+  <span class="cm">// ハンドル（固定頂点）の行を上書き: L[h,:] = e_h, b[h] = handle_pos</span>
+  <span class="kw">for</span> (<span class="kw">const</span> [h, pos] <span class="kw">of</span> handles) {
+    L.<span class="fn">clearRow</span>(h);
+    L.<span class="fn">set</span>(h, h, <span class="num">1</span>);
+    b[h] = pos;
+  }
+
+  <span class="cm">// 疎線形システムを解く（Cholesky 分解 or 共役勾配法）</span>
+  <span class="kw">return</span> <span class="fn">solveLinear</span>(L, b);
+}
+</pre>
+
+  <h3>インタラクティブ: 2D ARAP 変形</h3>
+  <p>メッシュの青い頂点（ハンドル）をドラッグすると、ARAP 変形を計算して表示します。</p>
+  <div class="demo-controls">
+    <button id="arapPlayBtn">▶ アニメーション</button>
+    <button id="arapResetBtn">リセット</button>
+    <label>反復回数: <input type="range" id="arapIter" min="1" max="10" value="3"> <span id="arapIterVal">3</span></label>
+  </div>
+  <canvas id="arapCanvas" width="640" height="360"></canvas>
+  <div class="info-grid" style="margin-top:16px">
+    <div class="info-card">
+      <div class="val" id="infoIter">0</div>
+      <div class="key">現在の反復回数</div>
+    </div>
+    <div class="info-card">
+      <div class="val" id="infoEnergy">—</div>
+      <div class="key">ARAP エネルギー</div>
+    </div>
+    <div class="info-card">
+      <div class="val" id="infoHandles">2</div>
+      <div class="key">ハンドル頂点数</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== STEP 4 -->
+<section id="step4">
+  <h2><span class="step-badge">STEP 4</span> 反復収束</h2>
+
+  <p>
+    Local Step と Global Step を交互に繰り返すことでエネルギーが単調減少し収束します。
+    実用上は <strong>3〜5回の反復</strong>で十分な精度が得られます。
+  </p>
+
+  <div class="math-box">
+    <div class="label">アルゴリズム全体の流れ</div>
+    <div style="font-family:monospace;font-size:0.9em;line-height:2">
+      <span style="color:var(--accent)">入力:</span> レスト形状 $\mathbf{p}$, ハンドル位置 $\mathbf{p}'_\text{handle}$<br>
+      <span style="color:var(--accent)">初期化:</span> $\mathbf{p}' \leftarrow \mathbf{p}$（または前フレームの結果）<br>
+      <span style="color:var(--accent)">事前計算:</span> コタンジェント重み $w_{ij}$, ラプラシアン行列 $L$（固定）<br>
+      <br>
+      <span style="color:var(--yellow)">repeat</span> $k = 1, 2, \ldots, K$ <span style="color:var(--yellow)">do</span><br>
+      &nbsp;&nbsp;<span style="color:var(--purple)">// Local Step</span><br>
+      &nbsp;&nbsp;$\forall i$: $S_i \leftarrow \sum_j w_{ij}\,\mathbf{e}_{ij}\,\mathbf{e}'^{\top}_{ij}$<br>
+      &nbsp;&nbsp;$\forall i$: $R_i \leftarrow V_i U_i^\top$ (SVD of $S_i$)<br>
+      &nbsp;&nbsp;<span style="color:var(--purple)">// Global Step</span><br>
+      &nbsp;&nbsp;$\forall i$: $\mathbf{b}_i \leftarrow \sum_j \tfrac{w_{ij}}{2}(R_i + R_j)\mathbf{e}_{ij}$<br>
+      &nbsp;&nbsp;$\mathbf{p}' \leftarrow L^{-1}\,\mathbf{b}$ (ハンドル拘束付き)<br>
+      <span style="color:var(--yellow)">until</span> 収束 or $k = K$
+    </div>
+  </div>
+
+  <h3>エネルギー収束グラフ</h3>
+  <div class="demo-controls">
+    <button id="convRunBtn">▶ シミュレーション実行</button>
+    <button id="convResetBtn">リセット</button>
+  </div>
+  <canvas id="convCanvas" width="640" height="220"></canvas>
+
+  <h3>計算量の分析</h3>
+  <table>
+    <tr><th>ステップ</th><th>計算量</th><th>備考</th></tr>
+    <tr><td>重み事前計算</td><td>$O(|F|)$</td><td>フレーム数 $|F|$, 1回のみ</td></tr>
+    <tr><td>$L$ の因数分解（Cholesky）</td><td>$O(n^{1.5})$ (疎)</td><td>1回のみ（ハンドル変更時に再計算）</td></tr>
+    <tr><td>Local Step（SVD × $n$）</td><td>$O(n)$</td><td>各反復, $3\times3$ SVD は定数時間</td></tr>
+    <tr><td>$\mathbf{b}$ の構築</td><td>$O(n)$</td><td>各反復</td></tr>
+    <tr><td>$L^{-1}\mathbf{b}$（前向き/後退代入）</td><td>$O(n)$</td><td>各反復（因数分解済み）</td></tr>
+  </table>
+
+  <div class="annotation">
+    ラプラシアン行列 $L$ はハンドル頂点が変わらない限り不変です。そのため Cholesky 因数分解を事前計算しておけば、各反復のコストは $O(n)$ に抑えられます。
+  </div>
+
+  <pre><span class="cm">// 完全な ARAP ループ</span>
+<span class="kw">function</span> <span class="fn">arap</span>(mesh, handles, K = <span class="num">5</span>) {
+  <span class="cm">// 事前計算（ハンドルが変わらなければ再利用）</span>
+  <span class="kw">const</span> W = <span class="fn">buildWeights</span>(mesh);
+  <span class="kw">const</span> L = <span class="fn">buildLaplacian</span>(W, handles);
+  <span class="kw">const</span> chol = <span class="fn">choleskyFactor</span>(L);  <span class="cm">// 事前因数分解</span>
+
+  <span class="kw">let</span> pNew = mesh.p.<span class="fn">slice</span>();  <span class="cm">// 初期値 = レスト形状</span>
+
+  <span class="kw">for</span> (<span class="kw">let</span> k = <span class="num">0</span>; k &lt; K; k++) {
+    <span class="cm">// --- Local Step ---</span>
+    <span class="kw">const</span> R = <span class="fn">localStep</span>(mesh, pNew);
+
+    <span class="cm">// --- Global Step ---</span>
+    <span class="kw">const</span> b = <span class="fn">buildRHS</span>(mesh, R);
+    pNew = <span class="fn">choleskyBackSolve</span>(chol, b);  <span class="cm">// L^{-1} b</span>
+  }
+
+  <span class="kw">return</span> pNew;
+}
+</pre>
+</section>
+
+<!-- ============================================================== DEMO -->
+<section id="demo">
+  <h2>インタラクティブデモ — 2D メッシュ変形</h2>
+  <p>
+    青い頂点（ハンドル）をドラッグして ARAP 変形を体験してください。
+    グリッドメッシュをリアルタイムで変形します。
+  </p>
+  <div class="demo-controls">
+    <button id="demoModeDeform" class="active">変形モード</button>
+    <button id="demoModeHandle">ハンドル追加</button>
+    <button id="demoModePin">ピン追加</button>
+    <button id="demoReset">メッシュリセット</button>
+  </div>
+  <canvas id="demoCanvas" width="640" height="400" style="cursor:crosshair;width:100%;max-width:640px"></canvas>
+  <div class="info-grid" style="margin-top:16px">
+    <div class="info-card">
+      <div class="val" id="demoVerts">—</div>
+      <div class="key">頂点数</div>
+    </div>
+    <div class="info-card">
+      <div class="val" id="demoTris">—</div>
+      <div class="key">三角形数</div>
+    </div>
+    <div class="info-card">
+      <div class="val" id="demoEnergy">—</div>
+      <div class="key">ARAP エネルギー</div>
+    </div>
+    <div class="info-card">
+      <div class="val" id="demoFps">—</div>
+      <div class="key">FPS</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>
+    原論文: <a href="https://igl.ethz.ch/projects/ARAP/arap_web.pdf" target="_blank">
+      "As-Rigid-As-Possible Surface Modeling" — Sorkine & Alexa, SGP 2007
+    </a>
+  </p>
+  <p style="margin-top:8px">
+    <a href="cup-flower/">器に咲く桜アート →</a>
+  </p>
+</footer>
+
+<script>
+/* =========================================================
+   ユーティリティ関数（2D ベクトル / 行列）
+   ========================================================= */
+const v2 = {
+  add:  (a,b) => [a[0]+b[0], a[1]+b[1]],
+  sub:  (a,b) => [a[0]-b[0], a[1]-b[1]],
+  scale:(a,s) => [a[0]*s, a[1]*s],
+  dot:  (a,b) => a[0]*b[0]+a[1]*b[1],
+  len:  a     => Math.hypot(a[0],a[1]),
+  norm: a     => { const l=Math.hypot(a[0],a[1]); return l>1e-9?[a[0]/l,a[1]/l]:[0,0]; },
+  lerp: (a,b,t) => [a[0]*(1-t)+b[0]*t, a[1]*(1-t)+b[1]*t],
+};
+
+/* 2×2 行列（列優先配列 [a,b,c,d] = [[a,c],[b,d]]） */
+const m2 = {
+  identity: () => [1,0,0,1],
+  mul: (A,B) => [
+    A[0]*B[0]+A[2]*B[1], A[1]*B[0]+A[3]*B[1],
+    A[0]*B[2]+A[2]*B[3], A[1]*B[2]+A[3]*B[3]
+  ],
+  transpose: A => [A[0],A[2],A[1],A[3]],
+  mulVec: (A,v) => [A[0]*v[0]+A[2]*v[1], A[1]*v[0]+A[3]*v[1]],
+  det: A => A[0]*A[3]-A[1]*A[2],
+};
+
+/* =========================================================
+   2×2 SVD（解析解）
+   S = U Σ V^T
+   ========================================================= */
+function svd2x2(S) {
+  // S = [a,b,c,d]  (S[0]=a, S[1]=b, S[2]=c, S[3]=d)
+  const a=S[0], b=S[2], c=S[1], d=S[3];
+  // tau = (a-d)/2b
+  const e = (a+d)*0.5, f = (a-d)*0.5;
+  const g = (b+c)*0.5, h = (b-c)*0.5;
+  const q = Math.sqrt(f*f+g*g), r = Math.sqrt(e*e+h*h);
+  const sx = r+q, sy = r-q;
+
+  const a1 = Math.atan2(g,f), a2 = Math.atan2(h,e);
+  const theta = (a2-a1)*0.5;
+  const phi   = (a2+a1)*0.5;
+
+  const ct=Math.cos(theta), st=Math.sin(theta);
+  const cp=Math.cos(phi),   sp=Math.sin(phi);
+
+  const U = [cp, sp, -sp, cp];  // rotation
+  const V = [ct, st, -st, ct];
+  return { U, S:[sx,sy], V };
+}
+
+/* =========================================================
+   SVD デモ（セクション 2）
+   ========================================================= */
+(function(){
+  const canvas = document.getElementById('svdCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=340, H=280, cx=W/2, cy=H/2;
+
+  // レスト形状: 4点の小メッシュ
+  const rest = [[-60,-40],[60,-40],[60,40],[-60,40]];
+  let def  = rest.map(p=>[...p]);
+  let drag = null;
+  let slider = document.getElementById('svdSlider');
+
+  function restoreDef(){
+    const t = slider.value/100;
+    def = rest.map((p,i) => {
+      const offsets = [[0,0],[20,-30],[10,20],[-10,30]];
+      return [p[0]+offsets[i][0]*t, p[1]+offsets[i][1]*t];
+    });
+  }
+  restoreDef();
+
+  canvas.addEventListener('mousedown', e=>{
+    const r=canvas.getBoundingClientRect();
+    const mx=(e.clientX-r.left)/r.width*W-cx;
+    const my=(e.clientY-r.top)/r.height*H-cy;
+    let best=null, bd=20;
+    def.forEach((p,i)=>{const d=Math.hypot(p[0]-mx,p[1]-my);if(d<bd){bd=d;best=i;}});
+    drag=best;
+  });
+  canvas.addEventListener('mousemove', e=>{
+    if(drag===null)return;
+    const r=canvas.getBoundingClientRect();
+    def[drag]=[(e.clientX-r.left)/r.width*W-cx,(e.clientY-r.top)/r.height*H-cy];
+    render();
+  });
+  canvas.addEventListener('mouseup', ()=>drag=null);
+  slider.addEventListener('input', ()=>{restoreDef();render();});
+  document.getElementById('svdResetBtn').addEventListener('click',()=>{
+    slider.value=50;restoreDef();render();
+  });
+
+  function computeSandR(){
+    // 重心合わせ
+    const gR = rest.reduce((a,p)=>v2.add(a,p),[0,0]).map(v=>v/rest.length);
+    const gD = def.reduce((a,p)=>v2.add(a,p),[0,0]).map(v=>v/def.length);
+    // S = sum( (p-gR)(q-gD)^T )
+    let S=[0,0,0,0];
+    for(let i=0;i<rest.length;i++){
+      const p=v2.sub(rest[i],gR);
+      const q=v2.sub(def[i],gD);
+      S[0]+=p[0]*q[0]; S[2]+=p[0]*q[1];
+      S[1]+=p[1]*q[0]; S[3]+=p[1]*q[1];
+    }
+    const {U,V}=svd2x2(S);
+    let R=m2.mul(V,m2.transpose(U));
+    if(m2.det(R)<0){
+      V[2]*=-1;V[3]*=-1;
+      R=m2.mul(V,m2.transpose(U));
+    }
+    return {S,R};
+  }
+
+  function fmtMat2(M,label){
+    const f=v=>v.toFixed(3).padStart(7);
+    const el=document.getElementById(label);
+    if(el) el.innerHTML=
+      `[${f(M[0])}  ${f(M[2])}]<br>[${f(M[1])}  ${f(M[3])}]`;
+    return M;
+  }
+
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save(); ctx.translate(cx,cy);
+
+    const {S,R}=computeSandR();
+    fmtMat2(S,'matS');
+    fmtMat2(R,'matR');
+    const angle=Math.atan2(R[1],R[0])*180/Math.PI;
+    const el=document.getElementById('rotAngle');
+    if(el) el.textContent=angle.toFixed(1)+'°';
+
+    // 変形前メッシュ（グレー）
+    ctx.strokeStyle='#444'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    rest.forEach((p,i)=>{if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});
+    ctx.closePath(); ctx.stroke();
+
+    // 変形後メッシュ（白）
+    ctx.strokeStyle='#8b949e'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    def.forEach((p,i)=>{if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});
+    ctx.closePath(); ctx.stroke();
+
+    // 回転を適用した変形前（アクセント色）
+    const gR=rest.reduce((a,p)=>v2.add(a,p),[0,0]).map(v=>v/rest.length);
+    const gD=def.reduce((a,p)=>v2.add(a,p),[0,0]).map(v=>v/def.length);
+    const rotated=rest.map(p=>v2.add(m2.mulVec(R,v2.sub(p,gR)),gD));
+    ctx.strokeStyle='#58a6ff'; ctx.lineWidth=2;
+    ctx.beginPath();
+    rotated.forEach((p,i)=>{if(i===0)ctx.moveTo(p[0],p[1]);else ctx.lineTo(p[0],p[1]);});
+    ctx.closePath(); ctx.stroke();
+
+    // 頂点
+    def.forEach((p,i)=>{
+      ctx.beginPath(); ctx.arc(p[0],p[1],5,0,Math.PI*2);
+      ctx.fillStyle=drag===i?'#f78166':'#3fb950'; ctx.fill();
+    });
+
+    // 凡例
+    ctx.restore();
+    ctx.font='11px monospace';
+    ctx.fillStyle='#444'; ctx.fillRect(10,H-56,12,12);
+    ctx.fillStyle='#8b949e'; ctx.fillText('変形前',28,H-46);
+    ctx.fillStyle='#8b949e'; ctx.fillRect(10,H-40,12,12);
+    ctx.fillStyle='#8b949e'; ctx.fillText('変形後',28,H-30);
+    ctx.fillStyle='#58a6ff'; ctx.fillRect(10,H-24,12,12);
+    ctx.fillStyle='#8b949e'; ctx.fillText('SVD 最適回転',28,H-14);
+  }
+  render();
+})();
+
+/* =========================================================
+   2D ARAP 実装（グリッドメッシュ）
+   ========================================================= */
+class ARAP2D {
+  constructor(rows, cols, cellSize) {
+    this.rows=rows; this.cols=cols; this.cs=cellSize;
+    this._build();
+  }
+
+  _build(){
+    const {rows,cols,cs}=this;
+    // 頂点
+    this.rest=[]; this.pos=[];
+    const ox=(cols-1)*cs*0.5, oy=(rows-1)*cs*0.5;
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+      this.rest.push([c*cs-ox, r*cs-oy]);
+      this.pos.push([c*cs-ox, r*cs-oy]);
+    }
+    this.n=this.rest.length;
+
+    // 三角形（各グリッドセルを2三角形に分割）
+    this.tris=[];
+    for(let r=0;r<rows-1;r++) for(let c=0;c<cols-1;c++){
+      const i=r*cols+c;
+      this.tris.push([i,i+1,i+cols]);
+      this.tris.push([i+1,i+cols+1,i+cols]);
+    }
+
+    // 近傍と重みを構築
+    this._buildNeighbors();
+    this._buildWeights();
+
+    // ハンドルとピン
+    this.handles=new Map();  // index -> target pos
+    this.pins=new Set();     // 固定頂点（動かない）
+
+    // デフォルトピン: 上辺中央
+    const topMid = Math.floor(cols/2);
+    this.pins.add(topMid);
+    // デフォルトハンドル: 下辺中央
+    const botMid = (rows-1)*cols+Math.floor(cols/2);
+    this.handles.set(botMid,[...this.pos[botMid]]);
+  }
+
+  _buildNeighbors(){
+    this.nbr=Array.from({length:this.n},()=>new Set());
+    for(const [a,b,c] of this.tris){
+      [[a,b],[b,c],[c,a]].forEach(([x,y])=>{
+        this.nbr[x].add(y); this.nbr[y].add(x);
+      });
+    }
+    this.nbr=this.nbr.map(s=>[...s]);
+  }
+
+  _buildWeights(){
+    // コタンジェント重みの計算（2D版: cot(角度) = cos/sin）
+    this.W=Array.from({length:this.n},()=>({}));
+    const cot=(pi,pj,pk)=>{
+      const u=v2.sub(pi,pk), vv=v2.sub(pj,pk);
+      const c=v2.dot(u,vv), s=Math.abs(u[0]*vv[1]-u[1]*vv[0]);
+      return s<1e-10?0:c/s;
+    };
+    for(const [a,b,c] of this.tris){
+      const pa=this.rest[a],pb=this.rest[b],pc=this.rest[c];
+      const wab=cot(pa,pb,pc)*0.5, wbc=cot(pb,pc,pa)*0.5, wca=cot(pc,pa,pb)*0.5;
+      this.W[a][b]=(this.W[a][b]||0)+wab; this.W[b][a]=(this.W[b][a]||0)+wab;
+      this.W[b][c]=(this.W[b][c]||0)+wbc; this.W[c][b]=(this.W[c][b]||0)+wbc;
+      this.W[c][a]=(this.W[c][a]||0)+wca; this.W[a][c]=(this.W[a][c]||0)+wca;
+    }
+    // 負の重みをクランプ（角度が鈍角の場合）
+    for(let i=0;i<this.n;i++)
+      for(const j of this.nbr[i])
+        if(this.W[i][j]<0.01) this.W[i][j]=0.01;
+  }
+
+  /* ---- Local Step ---- */
+  _localStep(){
+    this.R=[];
+    for(let i=0;i<this.n;i++){
+      let S=[0,0,0,0];
+      for(const j of this.nbr[i]){
+        const w=this.W[i][j]||1;
+        const e =v2.sub(this.rest[i],this.rest[j]);
+        const ep=v2.sub(this.pos[i], this.pos[j]);
+        S[0]+=w*e[0]*ep[0]; S[2]+=w*e[0]*ep[1];
+        S[1]+=w*e[1]*ep[0]; S[3]+=w*e[1]*ep[1];
+      }
+      const {U,V}=svd2x2(S);
+      let Ri=m2.mul(V,m2.transpose(U));
+      if(m2.det(Ri)<0){ V[2]*=-1;V[3]*=-1; Ri=m2.mul(V,m2.transpose(U)); }
+      this.R.push(Ri);
+    }
+  }
+
+  /* ---- Global Step（ガウスザイデル） ---- */
+  _globalStep(){
+    const n=this.n;
+    // 右辺ベクトル
+    const bx=new Float64Array(n), by=new Float64Array(n);
+    for(let i=0;i<n;i++){
+      for(const j of this.nbr[i]){
+        const w=this.W[i][j]||1;
+        const e=v2.sub(this.rest[i],this.rest[j]);
+        const rei=m2.mulVec(this.R[i],e);
+        const rej=m2.mulVec(this.R[j],e);
+        bx[i]+=(w*0.5)*(rei[0]+rej[0]);
+        by[i]+=(w*0.5)*(rei[1]+rej[1]);
+      }
+    }
+
+    // ガウスザイデル反復（疎ソルバーの簡易版）
+    const newPos=this.pos.map(p=>[...p]);
+    const GS_ITER=8;
+    for(let it=0;it<GS_ITER;it++){
+      for(let i=0;i<n;i++){
+        if(this.pins.has(i)){ newPos[i]=[...this.rest[i]]; continue; }
+        if(this.handles.has(i)){ newPos[i]=[...this.handles.get(i)]; continue; }
+        let sumW=0, rx=bx[i], ry=by[i];
+        for(const j of this.nbr[i]){
+          const w=this.W[i][j]||1;
+          rx+=w*newPos[j][0]; ry+=w*newPos[j][1]; sumW+=w;
+        }
+        if(sumW>1e-9){ newPos[i]=[rx/sumW, ry/sumW]; }
+      }
+    }
+    this.pos=newPos;
+  }
+
+  step(iters=3){
+    for(let k=0;k<iters;k++){
+      this._localStep();
+      this._globalStep();
+    }
+  }
+
+  computeEnergy(){
+    let E=0;
+    for(let i=0;i<this.n;i++){
+      for(const j of this.nbr[i]){
+        const w=this.W[i][j]||1;
+        const e =v2.sub(this.rest[i],this.rest[j]);
+        const ep=v2.sub(this.pos[i], this.pos[j]);
+        const re=m2.mulVec(this.R[i],e);
+        const d=v2.sub(ep,re);
+        E+=w*v2.dot(d,d);
+      }
+    }
+    return E;
+  }
+
+  reset(){
+    this.pos=this.rest.map(p=>[...p]);
+    this.R=Array.from({length:this.n},()=>m2.identity());
+    this.handles.forEach((v,k)=>{ this.handles.set(k,[...this.rest[k]]); });
+  }
+}
+
+/* =========================================================
+   ARAP キャンバスデモ（セクション 3 + インタラクティブデモ）
+   ========================================================= */
+function makeArapDemo(canvasId, infoIds, rows, cols, cellSize) {
+  const canvas=document.getElementById(canvasId);
+  if(!canvas) return null;
+  const ctx=canvas.getContext('2d');
+  const CW=canvas.width, CH=canvas.height;
+  const arap=new ARAP2D(rows,cols,cellSize);
+  let drag=null, dragIsHandle=false;
+  let mode='deform';
+  let animFrame=null, animT=0, animPlaying=false;
+  let fpsLast=performance.now(), fps=0, fpsCount=0;
+  let iterSlider=document.getElementById('arapIter');
+  let iterVal=document.getElementById('arapIterVal');
+
+  function toCanvas(p){ return [p[0]+CW/2, p[1]+CH/2]; }
+  function fromCanvas(x,y){ return [x-CW/2, y-CH/2]; }
+
+  function nearestVertex(mx,my,maxDist=16){
+    let best=null,bd=maxDist*maxDist;
+    arap.pos.forEach((p,i)=>{
+      const cp=toCanvas(p);
+      const d=(cp[0]-mx)**2+(cp[1]-my)**2;
+      if(d<bd){bd=d;best=i;}
+    });
+    return best;
+  }
+
+  function drawMesh(){
+    ctx.clearRect(0,0,CW,CH);
+
+    // 三角形（面）
+    for(const [a,b,c] of arap.tris){
+      const pa=toCanvas(arap.pos[a]), pb=toCanvas(arap.pos[b]), pc=toCanvas(arap.pos[c]);
+      ctx.beginPath();
+      ctx.moveTo(pa[0],pa[1]); ctx.lineTo(pb[0],pb[1]);
+      ctx.lineTo(pc[0],pc[1]); ctx.closePath();
+      ctx.fillStyle='rgba(88,166,255,0.04)';
+      ctx.fill();
+      ctx.strokeStyle='rgba(88,166,255,0.25)';
+      ctx.lineWidth=0.8;
+      ctx.stroke();
+    }
+
+    // ピン頂点
+    for(const i of arap.pins){
+      const p=toCanvas(arap.pos[i]);
+      ctx.beginPath(); ctx.arc(p[0],p[1],6,0,Math.PI*2);
+      ctx.fillStyle='#f78166'; ctx.fill();
+    }
+
+    // ハンドル頂点
+    arap.handles.forEach((tp,i)=>{
+      const p=toCanvas(arap.pos[i]);
+      ctx.beginPath(); ctx.arc(p[0],p[1],7,0,Math.PI*2);
+      ctx.fillStyle=drag===i?'#fff':'#58a6ff'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    });
+
+    // 情報表示
+    if(infoIds){
+      const E=arap.R?arap.computeEnergy():0;
+      if(infoIds.energy) { const el=document.getElementById(infoIds.energy); if(el) el.textContent=E.toFixed(2); }
+      if(infoIds.iter)   { const el=document.getElementById(infoIds.iter);   if(el) el.textContent=iterSlider?iterSlider.value:3; }
+      if(infoIds.handles){ const el=document.getElementById(infoIds.handles);if(el) el.textContent=arap.handles.size+arap.pins.size; }
+    }
+  }
+
+  function update(){
+    if(drag!==null && dragIsHandle){
+      const iters=iterSlider?parseInt(iterSlider.value):3;
+      arap.step(iters);
+    }
+    drawMesh();
+  }
+
+  function onDown(e){
+    const r=canvas.getBoundingClientRect();
+    const scaleX=CW/r.width, scaleY=CH/r.height;
+    const mx=(e.clientX-r.left)*scaleX, my=(e.clientY-r.top)*scaleY;
+
+    if(mode==='handle'){
+      const i=nearestVertex(mx,my);
+      if(i!==null){ arap.handles.set(i,[...arap.pos[i]]); arap.pins.delete(i); }
+      return;
+    }
+    if(mode==='pin'){
+      const i=nearestVertex(mx,my);
+      if(i!==null){ arap.pins.add(i); arap.handles.delete(i); }
+      return;
+    }
+    // deform mode
+    const i=nearestVertex(mx,my);
+    if(i!==null && (arap.handles.has(i)||arap.pins.has(i))){
+      drag=i; dragIsHandle=arap.handles.has(i);
+    }
+  }
+
+  function onMove(e){
+    if(drag===null) return;
+    const r=canvas.getBoundingClientRect();
+    const scaleX=CW/r.width, scaleY=CH/r.height;
+    const mx=(e.clientX-r.left)*scaleX, my=(e.clientY-r.top)*scaleY;
+    const wp=fromCanvas(mx,my);
+    if(dragIsHandle) arap.handles.set(drag,wp);
+    const iters=iterSlider?parseInt(iterSlider.value):3;
+    arap.step(iters);
+    drawMesh();
+  }
+
+  function onUp(){ drag=null; }
+
+  canvas.addEventListener('mousedown',onDown);
+  canvas.addEventListener('mousemove',onMove);
+  canvas.addEventListener('mouseup',onUp);
+  // touch
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e.touches[0]);},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e.touches[0]);},{passive:false});
+  canvas.addEventListener('touchend',()=>onUp());
+
+  arap.step(3);
+  drawMesh();
+  return {arap, drawMesh, setMode:m=>{ mode=m; }, reset:()=>{ arap.reset(); arap.step(3); drawMesh(); }};
+}
+
+/* ---- セクション 3 の ARAP デモ ---- */
+const arapDemo = makeArapDemo('arapCanvas',
+  {energy:'infoEnergy',iter:'infoIter',handles:'infoHandles'},
+  6, 8, 44);
+
+if(arapDemo){
+  document.getElementById('arapPlayBtn')?.addEventListener('click',function(){
+    const btn=this; let t=0;
+    const BASE_HANDLE=arapDemo.arap.handles.keys().next().value;
+    const orig=BASE_HANDLE!==undefined?[...arapDemo.arap.rest[BASE_HANDLE]]:null;
+    if(!orig)return;
+    function tick(){
+      t+=0.03;
+      const target=[orig[0]+Math.sin(t)*60, orig[1]+Math.cos(t*0.7)*40];
+      arapDemo.arap.handles.set(BASE_HANDLE,target);
+      arapDemo.arap.step(3);
+      arapDemo.drawMesh();
+      if(t<Math.PI*4) requestAnimationFrame(tick);
+      else { btn.textContent='▶ アニメーション'; }
+    }
+    btn.textContent='■ 停止'; tick();
+  });
+  document.getElementById('arapResetBtn')?.addEventListener('click',()=>arapDemo.reset());
+  document.getElementById('arapIter')?.addEventListener('input',function(){
+    const el=document.getElementById('arapIterVal'); if(el) el.textContent=this.value;
+  });
+}
+
+/* ---- インタラクティブデモ（セクション demo）---- */
+const mainDemo = makeArapDemo('demoCanvas',
+  {energy:'demoEnergy',handles:'demoHandles',iter:null},
+  8, 10, 52);
+
+if(mainDemo){
+  // 頂点・三角形数
+  const dv=document.getElementById('demoVerts');
+  const dt=document.getElementById('demoTris');
+  if(dv) dv.textContent=mainDemo.arap.n;
+  if(dt) dt.textContent=mainDemo.arap.tris.length;
+
+  // FPS カウンター
+  let lastFps=performance.now(), fpsCount=0;
+  const demoCanvas=document.getElementById('demoCanvas');
+  demoCanvas?.addEventListener('mousemove',()=>{
+    fpsCount++;
+    const now=performance.now();
+    if(now-lastFps>500){
+      const el=document.getElementById('demoFps');
+      if(el) el.textContent=Math.round(fpsCount/(now-lastFps)*1000);
+      fpsCount=0; lastFps=now;
+    }
+  });
+
+  ['demoModeDeform','demoModeHandle','demoModePin'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('click',function(){
+      ['demoModeDeform','demoModeHandle','demoModePin'].forEach(b=>{
+        document.getElementById(b)?.classList.remove('active');
+      });
+      this.classList.add('active');
+      const modeMap={demoModeDeform:'deform',demoModeHandle:'handle',demoModePin:'pin'};
+      mainDemo.setMode(modeMap[id]);
+    });
+  });
+  document.getElementById('demoReset')?.addEventListener('click',()=>mainDemo.reset());
+}
+
+/* =========================================================
+   収束グラフ（セクション 4）
+   ========================================================= */
+(function(){
+  const canvas=document.getElementById('convCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const PAD={t:20,r:20,b:36,l:52};
+  let energies=[];
+  let running=false;
+
+  function runSim(){
+    if(running) return;
+    running=true;
+    const sim=new ARAP2D(5,7,48);
+    // 大きな変位を加える
+    sim.handles.forEach((v,k)=>{
+      sim.handles.set(k,[v[0]+80,v[1]+60]);
+    });
+    energies=[];
+    let k=0;
+    function tick(){
+      sim._localStep();
+      sim._globalStep();
+      if(sim.R) energies.push(sim.computeEnergy());
+      drawGraph();
+      k++;
+      if(k<20) requestAnimationFrame(tick);
+      else running=false;
+    }
+    tick();
+  }
+
+  function drawGraph(){
+    ctx.clearRect(0,0,W,H);
+    const gW=W-PAD.l-PAD.r, gH=H-PAD.t-PAD.b;
+
+    // グリッド
+    ctx.strokeStyle='#21262d'; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const y=PAD.t+gH*i/4;
+      ctx.beginPath(); ctx.moveTo(PAD.l,y); ctx.lineTo(PAD.l+gW,y); ctx.stroke();
+    }
+
+    if(energies.length<2){ return; }
+    const maxE=energies[0]*1.1, minE=0;
+
+    // 軸ラベル
+    ctx.fillStyle='#8b949e'; ctx.font='11px monospace'; ctx.textAlign='right';
+    for(let i=0;i<=4;i++){
+      const v=maxE*(1-i/4);
+      ctx.fillText(v.toFixed(0),PAD.l-6,PAD.t+gH*i/4+4);
+    }
+    ctx.textAlign='center';
+    energies.forEach((_,i)=>{
+      if(i%5===0) ctx.fillText(i+1,PAD.l+gW*i/(energies.length-1),H-PAD.b+18);
+    });
+    ctx.fillText('反復回数',PAD.l+gW/2,H-2);
+
+    // エネルギー曲線
+    ctx.beginPath();
+    ctx.strokeStyle='#58a6ff'; ctx.lineWidth=2.5;
+    energies.forEach((e,i)=>{
+      const x=PAD.l+gW*i/(Math.max(energies.length-1,1));
+      const y=PAD.t+gH*(1-(e-minE)/(maxE-minE));
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // データ点
+    energies.forEach((e,i)=>{
+      const x=PAD.l+gW*i/(Math.max(energies.length-1,1));
+      const y=PAD.t+gH*(1-(e-minE)/(maxE-minE));
+      ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2);
+      ctx.fillStyle='#58a6ff'; ctx.fill();
+    });
+
+    // 軸タイトル
+    ctx.save(); ctx.translate(12,PAD.t+gH/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='#8b949e'; ctx.textAlign='center';
+    ctx.fillText('ARAP エネルギー E',0,0);
+    ctx.restore();
+  }
+
+  document.getElementById('convRunBtn')?.addEventListener('click',runSim);
+  document.getElementById('convResetBtn')?.addEventListener('click',()=>{
+    energies=[]; running=false; drawGraph();
+  });
+
+  drawGraph();
+})();
+
+/* =========================================================
+   ナビゲーション: スクロールでアクティブリンクを更新
+   ========================================================= */
+(function(){
+  const sections=['overview','step1','step2','step3','step4','demo'];
+  const links=document.querySelectorAll('nav a');
+  window.addEventListener('scroll',()=>{
+    let cur='overview';
+    for(const id of sections){
+      const el=document.getElementById(id);
+      if(el && el.getBoundingClientRect().top<=100) cur=id;
+    }
+    links.forEach(a=>{
+      a.classList.toggle('active',a.getAttribute('href')==='#'+cur);
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
