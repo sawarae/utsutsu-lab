@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>SO-101 Visualizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#080C18;--surface:#0F1525;--border:#1E2A40;
+  --accent:#00D4FF;--green:#00FF88;--purple:#A855F7;
+  --yellow:#FFD600;--text:#D8E0EE;--muted:#5A6880;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans',sans-serif;}
+.header{padding:10px 14px 0;flex-shrink:0;}
+.header h1{font-size:12px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;}
+.tab-bar{display:flex;padding:8px 14px 0;gap:6px;flex-shrink:0;}
+.tab-btn{padding:5px 11px;border-radius:6px 6px 0 0;border:1px solid var(--border);
+  border-bottom:none;background:var(--surface);color:var(--muted);font-size:11px;
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;}
+.tab-btn.active{background:#060C1A;color:var(--accent);border-color:var(--accent);}
+.tab-content{display:none;flex-direction:column;overflow:hidden;}
+.tab-content.active{display:flex;}
+#wrap{display:flex;flex-direction:column;height:100vh;}
+#tabs-area{flex:1;display:flex;flex-direction:column;min-height:0;
+  border-top:1px solid var(--accent);}
+/* ARM tab */
+#three-canvas{display:block;width:100%;flex:1;touch-action:none;cursor:grab;}
+.sliders-panel{flex-shrink:0;background:var(--surface);border-top:1px solid var(--border);
+  padding:6px 12px 8px;overflow-y:auto;max-height:38vh;}
+.s-row{display:grid;grid-template-columns:88px 1fr 44px 52px;align-items:center;
+  gap:6px;padding:3px 0;}
+.s-label{font-size:10px;color:var(--text);font-family:monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+input[type=range]{-webkit-appearance:none;height:3px;background:var(--border);
+  border-radius:2px;outline:none;width:100%;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--bg);}
+.s-deg{font-size:10px;font-family:monospace;color:var(--green);text-align:right;}
+.s-tick{font-size:10px;font-family:monospace;color:var(--yellow);text-align:right;}
+/* Flow tabs */
+#act-canvas,#smolvla-canvas{display:block;width:100%;flex:1;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="header"><h1>SO-101 × ACT / SmolVLA — Data Flow</h1></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="arm">3D ARM</button>
+    <button class="tab-btn" data-tab="act">ACT</button>
+    <button class="tab-btn" data-tab="smolvla">SmolVLA</button>
+  </div>
+  <div id="tabs-area">
+    <div id="tab-arm"     class="tab-content active">
+      <canvas id="three-canvas"></canvas>
+      <div class="sliders-panel"><div id="sliders"></div></div>
+    </div>
+    <div id="tab-act"     class="tab-content"><canvas id="act-canvas"></canvas></div>
+    <div id="tab-smolvla" class="tab-content"><canvas id="smolvla-canvas"></canvas></div>
+  </div>
+</div>
+<script>
+// ── TABS ──────────────────────────────────────────────
+const tabBtns = document.querySelectorAll('.tab-btn');
+tabBtns.forEach(b => b.addEventListener('click', () => {
+  tabBtns.forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+  if (b.dataset.tab === 'act'     && !actStarted)     { actStarted=true;     loopAct(); }
+  if (b.dataset.tab === 'smolvla' && !smolvlaStarted) { smolvlaStarted=true; loopSmolvla(); }
+}));
+
+// ── JOINT CONFIG ───────────────────────────────────────
+const JC = [
+  {name:'shoulder_pan',  mn:-100, mx:100,  v:0,   mnT:907,  mxT:3186},
+  {name:'shoulder_lift', mn:-95,  mx:95,   v:25,  mnT:980,  mxT:3115},
+  {name:'elbow_flex',    mn:-150, mx:150,  v:-55, mnT:683,  mxT:3413},
+  {name:'wrist_flex',    mn:-100, mx:100,  v:-30, mnT:780,  mxT:3316},
+  {name:'wrist_roll',    mn:-180, mx:180,  v:0,   mnT:410,  mxT:3686},
+  {name:'gripper',       mn:0,    mx:100,  v:35,  mnT:1600, mxT:2400},
+];
+const angles = JC.map(c => c.v);
+function toTick(deg, c){ return Math.round(c.mnT + (deg-c.mn)/(c.mx-c.mn)*(c.mxT-c.mnT)); }
+
+// Build sliders
+const sc = document.getElementById('sliders');
+JC.forEach((c,i) => {
+  const d = document.createElement('div'); d.className='s-row';
+  d.innerHTML=`<span class="s-label">${c.name}</span>
+    <input type="range" min="${c.mn}" max="${c.mx}" value="${c.v}" step="1" id="sl${i}">
+    <span class="s-deg"  id="dg${i}">${c.v}°</span>
+    <span class="s-tick" id="tk${i}">${toTick(c.v,c)}</span>`;
+  sc.appendChild(d);
+  d.querySelector(`#sl${i}`).addEventListener('input', e => {
+    const v = +e.target.value; angles[i]=v;
+    document.getElementById(`dg${i}`).textContent = Math.round(v)+'°';
+    document.getElementById(`tk${i}`).textContent = toTick(v,c);
+    updateArm();
+  });
+});
+
+// ── THREE.JS ───────────────────────────────────────────
+const tc = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({canvas:tc, antialias:true});
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x080C18);
+const scene = new THREE.Scene();
+const cam3 = new THREE.PerspectiveCamera(48, 1, 0.01, 50);
+let camTheta=0.7, camPhi=1.05, camR=2.6;
+function syncCam(){
+  cam3.position.set(
+    camR*Math.sin(camPhi)*Math.sin(camTheta),
+    camR*Math.cos(camPhi)+0.7,
+    camR*Math.sin(camPhi)*Math.cos(camTheta));
+  cam3.lookAt(0,0.55,0);
+}
+syncCam();
+
+// Lighting
+scene.add(new THREE.AmbientLight(0x204060,1.4));
+const dl = new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(2,4,2); scene.add(dl);
+const fl = new THREE.DirectionalLight(0x00D4FF,0.35); fl.position.set(-2,1,-2); scene.add(fl);
+scene.add(new THREE.GridHelper(3,12,0x1E2A40,0x1A2038));
+
+// Materials
+const mLink = new THREE.MeshPhongMaterial({color:0x1B3358,shininess:90});
+const mJnt  = new THREE.MeshPhongMaterial({color:0x00D4FF,shininess:120,emissive:0x003344});
+const mGrip = new THREE.MeshPhongMaterial({color:0x00FF88,shininess:100,emissive:0x003320});
+const mBase = new THREE.MeshPhongMaterial({color:0x0D1F35,shininess:60});
+
+function cyl(rt,rb,h,s=10){ return new THREE.CylinderGeometry(rt,rb,h,s); }
+function box(w,h,d){ return new THREE.BoxGeometry(w,h,d); }
+function sph(r){ return new THREE.SphereGeometry(r,10,10); }
+
+const root = new THREE.Group();
+root.scale.set(0.82,0.82,0.82);
+scene.add(root);
+
+// Base
+const base0 = new THREE.Mesh(cyl(0.22,0.26,0.06,16),mBase); base0.position.set(0,0.03,0); root.add(base0);
+const base1 = new THREE.Mesh(cyl(0.07,0.10,0.14,10),mBase); base1.position.set(0,0.10,0); root.add(base1);
+
+function addSphere(parent){ parent.add(new THREE.Mesh(sph(0.055),mJnt)); }
+
+// j0: shoulder_pan → Y
+const j0=new THREE.Group(); j0.position.y=0.17; root.add(j0); addSphere(j0);
+const shBlock=new THREE.Mesh(box(0.16,0.22,0.13),mLink); shBlock.position.y=0.11; j0.add(shBlock);
+
+// j1: shoulder_lift → Z
+const j1=new THREE.Group(); j1.position.y=0.22; j0.add(j1); addSphere(j1);
+const uArm=new THREE.Mesh(cyl(0.045,0.055,0.42,10),mLink); uArm.position.y=0.21; j1.add(uArm);
+const elbB=new THREE.Mesh(box(0.13,0.11,0.12),mLink); elbB.position.y=0.42; j1.add(elbB);
+
+// j2: elbow_flex → Z
+const j2=new THREE.Group(); j2.position.y=0.42; j1.add(j2); addSphere(j2);
+const fArm=new THREE.Mesh(cyl(0.038,0.045,0.36,10),mLink); fArm.position.y=0.18; j2.add(fArm);
+const wrB=new THREE.Mesh(box(0.11,0.10,0.10),mLink); wrB.position.y=0.36; j2.add(wrB);
+
+// j3: wrist_flex → Z
+const j3=new THREE.Group(); j3.position.y=0.36; j2.add(j3); addSphere(j3);
+const wrL=new THREE.Mesh(cyl(0.030,0.036,0.18,8),mLink); wrL.position.y=0.09; j3.add(wrL);
+
+// j4: wrist_roll → Y
+const j4=new THREE.Group(); j4.position.y=0.18; j3.add(j4); addSphere(j4);
+const grpB=new THREE.Mesh(box(0.14,0.055,0.06),mLink); grpB.position.y=0.028; j4.add(grpB);
+
+// j5: gripper
+const j5=new THREE.Group(); j5.position.y=0.055; j4.add(j5);
+const lFing=new THREE.Mesh(box(0.025,0.10,0.025),mGrip); lFing.position.y=0.05; j5.add(lFing);
+const rFing=new THREE.Mesh(box(0.025,0.10,0.025),mGrip); rFing.position.y=0.05; j5.add(rFing);
+[lFing,rFing].forEach(f=>{
+  const t=new THREE.Mesh(sph(0.018),mGrip); t.position.y=0.10; f.add(t);});
+
+function updateArm(){
+  j0.rotation.y = THREE.MathUtils.degToRad(angles[0]);
+  j1.rotation.z = THREE.MathUtils.degToRad(-angles[1]);
+  j2.rotation.z = THREE.MathUtils.degToRad(-angles[2]);
+  j3.rotation.z = THREE.MathUtils.degToRad(-angles[3]);
+  j4.rotation.y = THREE.MathUtils.degToRad(angles[4]);
+  const od = 0.025 + (angles[5]/100)*0.075;
+  lFing.position.x = -od; rFing.position.x = od;
+}
+updateArm();
+
+// Touch/mouse orbit
+let drag=false, px0=0, py0=0, autoRot=true;
+tc.addEventListener('mousedown',  e=>{drag=true; autoRot=false; px0=e.clientX; py0=e.clientY;});
+tc.addEventListener('mousemove',  e=>{if(!drag)return; camTheta-=(e.clientX-px0)*.009; camPhi=Math.max(.2,Math.min(1.5,camPhi+(e.clientY-py0)*.009)); px0=e.clientX; py0=e.clientY; syncCam();});
+tc.addEventListener('mouseup',    ()=>drag=false);
+tc.addEventListener('touchstart', e=>{e.preventDefault(); drag=true; autoRot=false; px0=e.touches[0].clientX; py0=e.touches[0].clientY;},{passive:false});
+tc.addEventListener('touchmove',  e=>{e.preventDefault(); if(!drag)return; camTheta-=(e.touches[0].clientX-px0)*.011; camPhi=Math.max(.2,Math.min(1.5,camPhi+(e.touches[0].clientY-py0)*.011)); px0=e.touches[0].clientX; py0=e.touches[0].clientY; syncCam();},{passive:false});
+tc.addEventListener('touchend',   ()=>drag=false);
+
+function resizeThree(){
+  const w=tc.clientWidth, h=tc.clientHeight;
+  if(w>0&&h>0&&(renderer.domElement.width!==w*devicePixelRatio||renderer.domElement.height!==h*devicePixelRatio)){
+    renderer.setSize(w,h,false); cam3.aspect=w/h; cam3.updateProjectionMatrix();
+  }
+}
+
+(function loopThree(){
+  requestAnimationFrame(loopThree);
+  if(!document.getElementById('tab-arm').classList.contains('active')) return;
+  resizeThree();
+  if(autoRot){camTheta+=.003; syncCam();}
+  renderer.render(scene,cam3);
+})();
+
+// ── FLOW CANVAS UTILS ──────────────────────────────────
+function bzPt(p0,p1,p2,p3,t){
+  const m=1-t;
+  return m*m*m*p0+3*m*m*t*p1+3*m*t*t*p2+t*t*t*p3;
+}
+function rrect(ctx,x,y,w,h,r){
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r); ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h); ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r); ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath();
+}
+function fitFont(ctx,text,maxW,maxSz,minSz,weight,family){
+  let sz=maxSz;
+  ctx.font=`${weight} ${sz}px ${family}`;
+  while(ctx.measureText(text).width>maxW-6&&sz>minSz){sz--; ctx.font=`${weight} ${sz}px ${family}`;}
+}
+
+function drawFlow(ctx,W,H,nodes,edges,t){
+  const C={bg:'#080C18',border:'#1E2A40',accent:'#00D4FF',
+    green:'#00FF88',purple:'#A855F7',yellow:'#FFD600',
+    text:'#D8E0EE',muted:'#5A6880'};
+  ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
+
+  // Build absolute positions
+  const nm={};
+  nodes.forEach(n=>{
+    nm[n.id]={...n,px:n.x*W,py:n.y*H,pw:n.w*W,ph:n.h*H};
+  });
+
+  // Edges
+  edges.forEach((e,ei)=>{
+    const a=nm[e.from], b=nm[e.to]; if(!a||!b)return;
+    const ax=a.px+a.pw/2, ay=a.py+a.ph;
+    const bx=b.px+b.pw/2, by=b.py;
+    const mid=(ay+by)/2;
+    // Line
+    ctx.beginPath(); ctx.moveTo(ax,ay);
+    ctx.bezierCurveTo(ax,mid,bx,mid,bx,by);
+    ctx.strokeStyle='#1E2A40'; ctx.lineWidth=1.5; ctx.stroke();
+    // Arrow
+    ctx.beginPath(); ctx.moveTo(bx-4,by-7); ctx.lineTo(bx,by-1); ctx.lineTo(bx+4,by-7);
+    ctx.strokeStyle='#2E4060'; ctx.lineWidth=1.5; ctx.stroke();
+    // Particle
+    const ph=((ei*0.41+t*0.45)%1);
+    const ppx=bzPt(ax,ax,bx,bx,ph), ppy=bzPt(ay,mid,mid,by,ph);
+    const g=ctx.createRadialGradient(ppx,ppy,0,ppx,ppy,6);
+    g.addColorStop(0,'rgba(0,212,255,.95)'); g.addColorStop(1,'rgba(0,212,255,0)');
+    ctx.beginPath(); ctx.arc(ppx,ppy,6,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+    ctx.beginPath(); ctx.arc(ppx,ppy,2,0,Math.PI*2); ctx.fillStyle=C.accent; ctx.fill();
+  });
+
+  // Nodes
+  nodes.forEach(n=>{
+    const {px,py,pw,ph}=nm[n.id];
+    ctx.beginPath(); rrect(ctx,px,py,pw,ph,5);
+    ctx.fillStyle=n.bg; ctx.fill();
+    ctx.strokeStyle=n.tc+'55'; ctx.lineWidth=1; ctx.stroke();
+    // Title
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    fitFont(ctx,n.label,pw,12,8,'700','-apple-system,sans-serif');
+    ctx.fillStyle=n.tc; ctx.fillText(n.label,px+pw/2,py+ph*.36);
+    // Sub
+    fitFont(ctx,n.sub,pw,9,7,'400','monospace');
+    ctx.fillStyle=C.muted; ctx.fillText(n.sub,px+pw/2,py+ph*.7);
+  });
+}
+
+// ── ACT FLOW ───────────────────────────────────────────
+let actStarted=false;
+function loopAct(){
+  const cv=document.getElementById('act-canvas');
+  const dpr=devicePixelRatio||1;
+  ;(function draw(){
+    if(!document.getElementById('tab-act').classList.contains('active')){requestAnimationFrame(draw);return;}
+    const W=cv.clientWidth, H=cv.clientHeight;
+    if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr; cv.height=H*dpr;}
+    const ctx=cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const t=Date.now()/1000;
+    const R=[.02,.13,.25,.37,.49,.62,.74,.86]; // row y positions (rel)
+    const NH=.09; // node height (rel)
+    const AC='#00D4FF', GR='#00FF88', PU='#A855F7', YE='#FFD600';
+    const nodes=[
+      // inputs
+      {id:'c1', x:.04,y:R[0],w:.28,h:NH,label:'Camera 1',    sub:'224×224×3',   bg:'#0E1E35',tc:AC},
+      {id:'c2', x:.36,y:R[0],w:.28,h:NH,label:'Camera 2',    sub:'224×224×3',   bg:'#0E1E35',tc:AC},
+      {id:'st', x:.69,y:R[0],w:.27,h:NH,label:'State',       sub:'6-dim joint', bg:'#0A1E10',tc:GR},
+      // encoders
+      {id:'r1', x:.04,y:R[1],w:.28,h:NH,label:'ResNet-18',   sub:'→ 512 feat',  bg:'#150A28',tc:PU},
+      {id:'r2', x:.36,y:R[1],w:.28,h:NH,label:'ResNet-18',   sub:'→ 512 feat',  bg:'#150A28',tc:PU},
+      {id:'li', x:.69,y:R[1],w:.27,h:NH,label:'Linear',      sub:'→ 512',       bg:'#150A28',tc:PU},
+      // concat
+      {id:'cc', x:.10,y:R[2],w:.80,h:NH,label:'concat + pos embed',sub:'T × 512  (T = img_tokens + 1)', bg:'#0A1530',tc:AC},
+      // transformer encoder + cvae
+      {id:'te', x:.04,y:R[3],w:.60,h:NH,label:'Transformer Encoder',sub:'4 layers  d=512  8 heads',bg:'#140828',tc:PU},
+      {id:'zv', x:.69,y:R[3],w:.27,h:NH,label:'z  (CVAE)',   sub:'train:N(μ,σ) / inf:0',bg:'#1A1400',tc:YE},
+      // transformer decoder
+      {id:'td', x:.04,y:R[4],w:.92,h:NH,label:'Transformer Decoder',sub:'7 layers  50 learnable queries → 50×512',bg:'#140828',tc:PU},
+      // chunk
+      {id:'ch', x:.10,y:R[5],w:.80,h:NH,label:'Action Chunk',sub:'50 steps × 6 joints  [normalized ~N(0,1)]',bg:'#081825',tc:AC},
+      // unnorm + tick
+      {id:'un', x:.04,y:R[6],w:.44,h:NH,label:'Unnormalize', sub:'×std+mean → degree',bg:'#0A1810',tc:GR},
+      {id:'ti', x:.52,y:R[6],w:.44,h:NH,label:'Tick変換',    sub:'0~4095  STS3215',   bg:'#181000',tc:YE},
+      // servo
+      {id:'sv', x:.10,y:R[7],w:.80,h:NH,label:'STS3215 × 6',sub:'SCSerial 1Mbps  Goal Position',bg:'#081408',tc:GR},
+    ];
+    const edges=[
+      {from:'c1',to:'r1'},{from:'c2',to:'r2'},{from:'st',to:'li'},
+      {from:'r1',to:'cc'},{from:'r2',to:'cc'},{from:'li',to:'cc'},
+      {from:'cc',to:'te'},{from:'te',to:'td'},{from:'zv',to:'td'},
+      {from:'td',to:'ch'},{from:'ch',to:'un'},{from:'un',to:'ti'},
+      {from:'ti',to:'sv'},
+    ];
+    drawFlow(ctx,W,H,nodes,edges,t);
+    // Label
+    ctx.fillStyle='#5A6880'; ctx.font='bold 9px monospace';
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('ACT — Action Chunking Transformer',W-6,H-3);
+    requestAnimationFrame(draw);
+  })();
+}
+
+// ── SmolVLA FLOW ───────────────────────────────────────
+let smolvlaStarted=false;
+function loopSmolvla(){
+  const cv=document.getElementById('smolvla-canvas');
+  const dpr=devicePixelRatio||1;
+  ;(function draw(){
+    if(!document.getElementById('tab-smolvla').classList.contains('active')){requestAnimationFrame(draw);return;}
+    const W=cv.clientWidth, H=cv.clientHeight;
+    if(cv.width!==W*dpr||cv.height!==H*dpr){cv.width=W*dpr; cv.height=H*dpr;}
+    const ctx=cv.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const t=Date.now()/1000;
+    const R=[.02,.14,.27,.38,.50,.62,.74,.85];
+    const NH=.09;
+    const AC='#00D4FF', GR='#00FF88', PU='#A855F7', YE='#FFD600';
+    const nodes=[
+      // inputs
+      {id:'c1', x:.03,y:R[0],w:.22,h:NH,label:'Camera 1',sub:'224×224×3',bg:'#0E1E35',tc:AC},
+      {id:'c2', x:.28,y:R[0],w:.22,h:NH,label:'Camera 2',sub:'224×224×3',bg:'#0E1E35',tc:AC},
+      {id:'la', x:.53,y:R[0],w:.22,h:NH,label:'Language',sub:'"pick up cube"',bg:'#170A28',tc:PU},
+      {id:'st', x:.78,y:R[0],w:.19,h:NH,label:'State',   sub:'6-dim',bg:'#0A1E10',tc:GR},
+      // VLM
+      {id:'vm', x:.03,y:R[1],w:.94,h:.10,label:'SmolVLM-2  (Vision-Language Encoder)',
+        sub:'500M · skip 50% layers · image tiling → flat tokens',bg:'#100630',tc:PU},
+      // tokens
+      {id:'tk', x:.10,y:R[2],w:.80,h:NH,label:'VL Tokens',sub:'N × 1152 hidden dim',bg:'#08142A',tc:AC},
+      // action expert
+      {id:'ae', x:.03,y:R[3],w:.94,h:.10,label:'Action Expert  (Flow Matching decoder)',
+        sub:'noise z~N(0,I)  → 10 ODE steps → 50×6',bg:'#140828',tc:PU},
+      // ode steps
+      {id:'od', x:.15,y:R[4],w:.70,h:NH,label:'ODE denoising × 10',sub:'v_θ(z_t,t,cond) — Euler steps',bg:'#130625',tc:PU},
+      // chunk
+      {id:'ch', x:.10,y:R[5],w:.80,h:NH,label:'Action Chunk',sub:'50 steps × 6 joints  [normalized]',bg:'#081825',tc:AC},
+      // unnorm tick
+      {id:'un', x:.03,y:R[6],w:.45,h:NH,label:'Unnormalize',sub:'×std+mean → degree',bg:'#0A1810',tc:GR},
+      {id:'ti', x:.52,y:R[6],w:.45,h:NH,label:'Tick変換',   sub:'0~4095  STS3215',bg:'#181000',tc:YE},
+      // servo
+      {id:'sv', x:.10,y:R[7],w:.80,h:NH,label:'STS3215 × 6',sub:'async: 推論とアーム動作は並列',bg:'#081408',tc:GR},
+    ];
+    const edges=[
+      {from:'c1',to:'vm'},{from:'c2',to:'vm'},{from:'la',to:'vm'},{from:'st',to:'vm'},
+      {from:'vm',to:'tk'},{from:'tk',to:'ae'},{from:'ae',to:'od'},
+      {from:'od',to:'ch'},{from:'ch',to:'un'},{from:'un',to:'ti'},{from:'ti',to:'sv'},
+    ];
+    drawFlow(ctx,W,H,nodes,edges,t);
+    ctx.fillStyle='#5A6880'; ctx.font='bold 9px monospace';
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('SmolVLA — Vision-Language-Action',W-6,H-3);
+    requestAnimationFrame(draw);
+  })();
+}
+</script>
+</body>
+</html>
